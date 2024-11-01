@@ -225,3 +225,62 @@ heatmap_plot <- function(pg_matrix, batch_info, name, condition="condition", lab
     return(resulting_plot)
 }
 
+plots_three <- function(expr, metadata, dataset, color_col='Status') {
+    pca_plot <- pca_plot(
+        expr, metadata, 
+        dataset,
+        col_col = color_col, shape_col = "Dataset", quantitative_col_name = 'sample_id')
+
+    boxplot <- boxplot_plot(
+        expr, metadata, 
+        title = dataset,
+        color_col = color_col, quantitativeColumnName = 'sample_id', 
+        path = '')
+
+    density_plot <- plotIntensityDensity(
+        expr, metadata, 
+        quantitativeColumnName = 'sample_id', 
+        colorColumnName = color_col,
+        title = dataset)
+
+    return(list(pca_plot, density_plot, boxplot))
+}
+
+
+plot_diagnostic <- function(expression, metadata, dataset,
+                            log_transform = FALSE, with_rowname = FALSE,
+                            rownames_name = "gene_id") {
+    
+    plt_expression <- expression
+
+    # if without rowname, then use the first column as rowname
+    if (!with_rowname) {
+        plt_expression <- plt_expression %>% column_to_rownames(rownames_name)
+    } 
+    if (!log_transform) {
+        plt_expression <- log2(plt_expression + 1)
+    }
+
+    plt_meta <- metadata[metadata$sample_id %in% colnames(plt_expression),] %>%
+        mutate(Status = as.factor(Status))
+    plt_expression <- plt_expression[, plt_meta$sample_id]
+
+    print("..plotting..")
+    if (nrow(plt_expression) >10000) {
+            #  plot
+      plot_res <- plots_three(
+          plt_expression[sample(1:nrow(plt_expression), 10000),], 
+          plt_meta, 
+          paste0(dataset, " log2(data + 1)")
+          )
+    } else {
+      plot_res <- plots_three(
+          plt_expression, 
+          plt_meta, 
+          paste0(dataset, " log2(data + 1)")
+          )
+    }
+
+
+    return(plot_res)
+}
