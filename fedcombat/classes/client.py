@@ -264,6 +264,9 @@ class Client:
                     )
                 # Set the values for these features in this batch to NaN
                 self.data.loc[ignore_features, batch_indices] = np.nan
+                # remove features with NA values
+                self.data = self.data.dropna(axis=0, how='all')
+                
 
         # 2. Global privacy check: Features must have at least min_samples non-NaN entries across the client.
         non_nan_counts = self.data.notnull().sum(axis=1)
@@ -272,7 +275,8 @@ class Client:
             self.logger.info(
                 f"Ignoring {len(ignore_features_global)} features for client {self.client_name} due to privacy reasons."
             )
-        self.data.loc[ignore_features_global, :] = np.nan
+        # remove features with less than min_samples non-NaN entries
+        self.data = self.data.drop(index=ignore_features_global, errors='ignore')
 
         # 3. Determine feature presence for each batch.
         for batch_label in self.batch_labels:
@@ -287,6 +291,10 @@ class Client:
                 # If the feature exists and at least one sample is non-NaN in this batch
                 if feature in batch_data.index and not batch_data.loc[feature].isnull().all():
                     batch_feature_presence_info[batch_label].append(feature)
+
+        # raise an error if no features are available for correction
+        if not any(batch_feature_presence_info.values()):
+            raise ValueError("No features available for correction. Check the data and design matrix.")
 
         return batch_feature_presence_info
 
@@ -507,7 +515,7 @@ class Client:
                         f"ERROR: the given variables {self.variables} were not found in the design matrix."
                     )
                     raise ValueError("Variables not found in the design matrix")
-            desired_order = cohorts + self.variables
+            desired_order = list(cohorts) + list( self.variables)
 
         self.design = self.design.loc[:, desired_order]
         

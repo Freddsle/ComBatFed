@@ -116,6 +116,8 @@ def select_common_features_variables(
     feature_presence_matrix, cohorts_order = create_feature_presence_matrix(
         feature_batch_info, global_feature_names, default_order
     )
+    if global_feature_names == []:
+        raise ValueError("No common features found across clients")
     return global_feature_names, feature_presence_matrix, cohorts_order
 
 
@@ -142,14 +144,16 @@ def aggregate_XtX_XtY(
     Returns:
         (XtX_global, XtY_global): A tuple containing the aggregated XtX and XtY
             matrices.
+        ref_size: The number of samples in the reference batch (first batch).
     """
     if len(XtX_XtY_lists) == 0:
         raise ValueError("No data received from clients")
 
     XtX_global = np.zeros((n, k, k))
     XtY_global = np.zeros((n, k))
+    ref_size = None
 
-    for XtX, XtY in XtX_XtY_lists:
+    for XtX, XtY, local_ref_size in XtX_XtY_lists:
         # due to serialization, the matrices are received as lists
         XtX = np.array(XtX)
         XtY = np.array(XtY)
@@ -157,8 +161,10 @@ def aggregate_XtX_XtY(
             raise ValueError(f"Shape of received XtX or XtY does not match the expected shape: {XtX.shape} {XtY.shape}")
         XtX_global += XtX
         XtY_global += XtY
+        if local_ref_size:
+            ref_size = local_ref_size
 
-    return XtX_global, XtY_global
+    return XtX_global, XtY_global, ref_size
 
 
 def compute_B_hat(
@@ -205,4 +211,3 @@ def compute_mean(
     # Replicate grand_mean to create stand_mean, a matrix of shape (features, n_array)
     stand_mean = np.outer(grand_mean, np.ones(n_array))
     return grand_mean, stand_mean
-)
