@@ -526,3 +526,45 @@ class Client:
             
     
         return
+    
+
+    #############################
+    # ComBat-related functions #
+    #############################
+    def compute_XtX_XtY(self) -> Tuple[np.ndarray, np.ndarray, str]:
+        """
+        Computes the XtX and XtY matrices for each feature.
+        
+        For each feature (row in self.data), it selects a sample, then computes:
+        - XtX: (X_valid)^T @ (X_valid)
+        - XtY: (X_valid)^T @ y_valid
+
+        Returns:
+            A tuple (XtX, XtY) where:
+            - XtX is an array of shape (n_features, k, k)
+            - XtY is an array of shape (n_features, k)
+        """
+        if not isinstance(self.design, pd.DataFrame):
+            self.logger.error("Design matrix must be a pandas DataFrame.")
+            raise ValueError("Design matrix must be a pandas DataFrame.")
+        if not isinstance(self.data, pd.DataFrame):
+            self.logger.error("Data matrix must be a pandas DataFrame.")
+            raise ValueError("Data matrix must be a pandas DataFrame.")
+        
+        X = self.design.values  # shape: (n_samples, k)
+        Y = self.data.values    # shape: (n_features, n_samples)
+        n_features, _ = Y.shape
+        k = X.shape[1]
+        
+        XtX = np.zeros((n_features, k, k))
+        XtY = np.zeros((n_features, k))
+        
+        for i in range(n_features):
+            y = Y[i, :]
+            valid = np.isfinite(y)  # boolean array of valid indices
+            if valid.any():
+                x_valid = X[valid, :]  # corresponding rows in design
+                y_valid = y[valid]
+                XtX[i] = x_valid.T @ x_valid
+                XtY[i] = x_valid.T @ y_valid
+        return XtX, XtY

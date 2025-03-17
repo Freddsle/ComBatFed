@@ -133,16 +133,55 @@ class ValidationState(AppState):
 @app_state('first_step')
 class FirstCombatStep(AppState):
     def register(self):
-        self.register_transition('apply_correction')
+        self.register_transition('apply_correction', Role.PARTICIPANT)
+        self.register_transition('compute_b_hat', Role.COORDINATOR)
 
     def run(self):
         logging.info("[ComBat-first_step:] Starting the first step of ComBat")
         client = self.load('client')
         logging.info(f"[ComBat-first_step:] Adjusting for {len(client.variables)} covariate(s) or covariate level(s)")
+        if client.mean_only:
+            logging.info("[ComBat-first_step:] Performing ComBat with mean only.")
         
-        
+        # getting XtX and Xty
+        XtX, XtY = client.compute_XtX_XtY()
 
+        # send the data to the coordinator
+        self.send_data_to_coordinator([XtX, XtY], send_to_self=True, use_smpc=client.smpc)
+        logging.info("[ComBat-first_step:] Computation done, sending data to coordinator")
+        logging.info(f"[ComBat-first_step:] XtX of shape {XtX.shape}, X of shape {client.design.shape}, XtY of shape {XtY.shape}")
+
+        # If the client is the coordinator, we can move to the next step
+        if self.is_coordinator:
+            return 'compute_b_hat'
         return 'apply_correction'
+
+
+@app_state('compute_b_hat')
+class ComputeBHatState(AppState):
+    def register(self):
+        self.register_transition('apply_correction')
+
+    def run(self):
+        logging.info("[Compute_b_hat] Computing b_hat")
+        client = self.load('client')
+        n = client.data.values.shape[0]
+        k = client.design.shape[1]
+        XtX_XtY_lists = self.gather_data(is_json=False, n=n, k=k, use_smpc=client.smpc)
+        self.log("[ComBat-first_step:] Got XtX_XtY_list from gathered data.")
+
+        # Aggregate the XtX and XtY values from all clients
+        XtX_global, XtY_global = c_utils.aggregate_XtX_XtY(XtX_XtY_lists, client.smpc)
+        self.store(key="XtX_global", value=XtX_global)
+        self.store(key="XtY_global", value=XtY_global)
+
+        # Compute B.hat = inv(ls1) @ ls2.
+        B_hat = c_utils.compute_B_hat(XtX_global, XtY_global)
+        self.store(key="B_hat", value=B_hat)
+        self.log("[Compute_b_hat:] B_hat has been computed.")
+        # Compute the grand mean and stand_mean
+        grand_mean, stand_mean = c_utils.compute_mean(XtX_global, XtY_global, B_hat)
+
 
 
 @app_state('apply_correction')

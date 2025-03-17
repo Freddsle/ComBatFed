@@ -117,3 +117,92 @@ def select_common_features_variables(
         feature_batch_info, global_feature_names, default_order
     )
     return global_feature_names, feature_presence_matrix, cohorts_order
+
+
+def aggregate_XtX_XtY(
+    XtX_XtY_lists: List[List[np.ndarray]],
+    n: int,
+    k: int,
+    use_smpc: bool = False
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Gets a list of a List containing the XtX and XtY matrices from each client
+    and aggregates them into a single XtX_global and XtY_global matrix.
+    Args:
+        XtX_XtY_list: A list of tuples containing the XtX and XtY matrices from
+            each client. The first element of the tuple is the XtX matrix and the
+            second element is the XtY matrix.
+            XtX should be of shape n x k x k and XtY should be of shape n x k.
+        n: The expected number of features.
+        k: The expected number of columns of the design matrix. Generally, is
+            len([len(clients)] + [covariates])
+            XtX should be of shape n x k x k and XtY should be of shape n x k.
+        use_smpc: A boolean indicating if then computation was done using SMPC
+            if yes, the data is already aggregated
+    Returns:
+        (XtX_global, XtY_global): A tuple containing the aggregated XtX and XtY
+            matrices.
+    """
+    if len(XtX_XtY_lists) == 0:
+        raise ValueError("No data received from clients")
+
+    XtX_global = np.zeros((n, k, k))
+    XtY_global = np.zeros((n, k))
+
+    for XtX, XtY in XtX_XtY_lists:
+        # due to serialization, the matrices are received as lists
+        XtX = np.array(XtX)
+        XtY = np.array(XtY)
+        if XtX.shape[0] != n or XtX.shape[1] != k or XtY.shape[0] != n or XtY.shape[1] != k:
+            raise ValueError(f"Shape of received XtX or XtY does not match the expected shape: {XtX.shape} {XtY.shape}")
+        XtX_global += XtX
+        XtY_global += XtY
+
+    return XtX_global, XtY_global
+
+
+def compute_B_hat(
+    XtX_global: np.ndarray,
+    XtY_global: np.ndarray
+) -> np.ndarray:
+    """
+    Computes the B_hat matrix for the ComBat algorithm.
+    Args:
+        XtX_global: The aggregated XtX matrix of shape n x k x k.
+        XtY_global: The aggregated XtY matrix of shape n x k.
+    Returns:
+        B_hat: The B_hat matrix of shape k x n.
+    """
+    try:
+        XtX_global_inv = np.linalg.inv(XtX_global)
+    except np.linalg.LinAlgError:
+        raise ValueError("The XtX_global matrix is singular and cannot be inverted.")
+    B_hat = XtX_global_inv @ XtY_global  # B_hat has shape (k x n)
+    return B_hat
+
+def compute_mean(
+    XtX_global: np.ndarray,
+    XtY_global: np.ndarray,
+    B_hat: np.ndarray
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Computes the grand mean and standardized mean for the ComBat algorithm.
+    Args:
+        XtX_global: The aggregated XtX matrix of shape n x k x k.
+        XtY_global: The aggregated XtY matrix of shape n x k.
+        B_hat: The B_hat matrix of shape k x n.
+    Returns:
+        grand_mean: The grand mean vector of shape n.
+        stand_mean: The standardized mean matrix of shape n x k.
+    """
+    # Compute the grand mean:
+    # Compute weighted average of the first n_batch rows of B_hat.
+    # The weights are n_batches_arr / n_array.
+    weights = n_batches_arr / n_array  # shape (n_batch,)
+    # B_hat[0:n_batch, :] has shape (n_batch, features)
+    grand_mean = weights @ B_hat[0:n_batch, :] 
+    
+    # Replicate grand_mean to create stand_mean, a matrix of shape (features, n_array)
+    stand_mean = np.outer(grand_mean, np.ones(n_array))
+    return grand_mean, stand_mean
+)

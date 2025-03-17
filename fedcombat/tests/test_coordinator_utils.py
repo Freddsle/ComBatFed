@@ -3,6 +3,7 @@ import numpy as np
 from classes.coordinator_utils import (
     create_feature_presence_matrix,
     select_common_features_variables,
+    aggregate_XtX_XtY,
     FeatureBatchInfoType  # if exported, otherwise, use Tuple[str, Union[int, None], Union[str, bool, None], dict]
 )
 
@@ -101,6 +102,79 @@ class TestBatchEffectFunctions(unittest.TestCase):
         with self.assertRaises(ValueError) as context:
             create_feature_presence_matrix(feature_batch_info, global_feature_names, self.default_order)
         self.assertIn("Batch name incorrectly formatted", str(context.exception))
+
+
+class TestAggregateXtX_XtY(unittest.TestCase):
+    
+    def test_empty_input(self):
+        # Test that an empty list raises a ValueError.
+        with self.assertRaises(ValueError) as context:
+            aggregate_XtX_XtY([], n=2, k=3)
+        self.assertIn("No data received from clients", str(context.exception))
+        
+    def test_correct_aggregation(self):
+        # Define dimensions
+        n, k = 2, 3
+        
+        # Create two clients with valid shapes.
+        # For each client, XtX is of shape (n, k, k) and XtY is of shape (n, k)
+        client1_XtX = np.array([[[1, 2, 3],
+                                  [4, 5, 6],
+                                  [7, 8, 9]],
+                                 [[1, 0, 1],
+                                  [0, 1, 0],
+                                  [1, 0, 1]]])
+        client1_XtY = np.array([[1, 2, 3],
+                                [4, 5, 6]])
+        
+        client2_XtX = np.array([[[9, 8, 7],
+                                  [6, 5, 4],
+                                  [3, 2, 1]],
+                                 [[0, 1, 0],
+                                  [1, 0, 1],
+                                  [0, 1, 0]]])
+        client2_XtY = np.array([[9, 8, 7],
+                                [6, 5, 4]])
+        
+        # Create the list of client matrices
+        XtX_XtY_lists = [
+            (client1_XtX.tolist(), client1_XtY.tolist()),
+            (client2_XtX.tolist(), client2_XtY.tolist())
+        ]
+        
+        # Expected results computed by summing the two clients.
+        expected_XtX = client1_XtX + client2_XtX
+        expected_XtY = client1_XtY + client2_XtY
+        
+        # Run the aggregator
+        XtX_global, XtY_global = aggregate_XtX_XtY(XtX_XtY_lists, n=n, k=k)
+        
+        # Validate the results
+        np.testing.assert_array_equal(XtX_global, expected_XtX)
+        np.testing.assert_array_equal(XtY_global, expected_XtY)
+    
+    def test_invalid_shape(self):
+        # Define dimensions
+        n, k = 2, 3
+        
+        # Create one client with correct shape and one with an invalid shape.
+        valid_XtX = np.zeros((n, k, k))
+        valid_XtY = np.zeros((n, k))
+        
+        # Create an invalid client whose XtX has wrong dimensions.
+        invalid_XtX = np.zeros((n + 1, k, k))  # invalid: n+1 instead of n
+        invalid_XtY = np.zeros((n, k))
+        
+        XtX_XtY_lists = [
+            (valid_XtX.tolist(), valid_XtY.tolist()),
+            (invalid_XtX.tolist(), invalid_XtY.tolist())
+        ]
+        
+        # Expect a ValueError indicating a shape mismatch.
+        with self.assertRaises(ValueError) as context:
+            aggregate_XtX_XtY(XtX_XtY_lists, n=n, k=k)
+        self.assertIn("Shape of received XtX or XtY does not match the expected shape", str(context.exception))
+
 
 if __name__ == '__main__':
     unittest.main()
