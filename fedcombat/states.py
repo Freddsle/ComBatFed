@@ -1,0 +1,168 @@
+import os
+import numpy as np
+
+from typing import List, Dict
+import logging
+
+from FeatureCloud.app.engine.app import AppState, app_state, Role, LogLevel
+
+from classes.client import Client
+import classes.coordinator_utils as c_utils
+
+INPUT_FOLDER = os.path.join("mnt", "input")
+
+logging.basicConfig(level=logging.INFO)
+
+@app_state('initial')
+class InitialState(AppState):
+
+    def register(self):
+        self.register_transition('global_feature_selection', Role.COORDINATOR)
+        self.register_transition('validate', Role.PARTICIPANT)
+
+    def run(self):
+        # defining the client
+        cohort_name = self.id
+        client = Client()
+        client.config_based_init(
+            client_name = cohort_name, 
+            input_folder = INPUT_FOLDER
+        )
+
+        self.store(key="smpc", value=client.smpc)
+        self.store(key='client', value=client)
+        self.store(key="separator", value=client.data_separator)
+        self.configure_smpc(exponent=12)
+
+        # exchange the batch_labels and covariates
+        self.send_data_to_coordinator(
+            (client.batch_labels, client.variables),
+            send_to_self=True,
+            use_smpc=False
+        )
+
+        # -------- coordinator --------        
+        if self.is_coordinator:
+            # union the batch_labels and intersect the covariates
+            list_labels_variables = self.gather_data(is_json=False)
+            first_labels, first_variables = list_labels_variables[0]
+            global_variables = set(first_variables)
+            global_batch_labels = list(first_labels)
+            
+            for labels, variables in list_labels_variables[1:]:
+                global_variables.intersection_update(variables)
+                global_batch_labels.extend(labels)
+                
+            # Check for uniqueness in batch labels
+            if len(global_batch_labels) != len(set(global_batch_labels)):
+                raise ValueError("Batch labels are not unique across clients, please adjust them")
+            # send around the number of batches and the variables            
+            self.broadcast_data((global_variables, len(global_batch_labels)),
+                                send_to_self=True,
+                                memo="commonVariables")
+
+        # -------- participant --------
+        # we receive the common variables and the number of batches
+        global_variables, num_batches = self.await_data(n=1, is_json=False, memo="commonVariables")
+        self.store(key='global_variables', value=global_variables)
+        # now we can calculate the min_samples_per_feature
+        min_samples = max(num_batches + len(global_variables) + 1, client.min_samples)
+
+        batch_feature_presence = client.get_batch_feature_presence_info(min_samples=min_samples)
+
+        self.send_data_to_coordinator((cohort_name,
+                                       client.position,
+                                       client.reference_batch,
+                                       batch_feature_presence),
+                                    send_to_self=True,
+                                    use_smpc=False)
+        if self.is_coordinator:
+            return 'global_feature_selection'
+        return 'validate'
+
+
+@app_state('global_feature_selection')
+class GlobalFeatureSelection(AppState):
+    def register(self):
+        self.register_transition('validate', Role.COORDINATOR)
+
+    def run(self):
+        # wait for each client to send the list of genes they have
+        logging.info("[global_feature_selection] Waiting for clients to send their data")
+        feature_information = self.gather_data(is_json=False)
+        logging.info("[global_feature_selection] Received data from all clients")
+
+        assert self._app is not None
+        global_feature_names, feature_presence_matrix, cohorts_order = \
+              c_utils.select_common_features_variables(feature_information,
+                                                       default_order=self._app.clients,
+                                                       min_clients=len(self._app.clients))
+        self.broadcast_data((global_feature_names, cohorts_order),
+                            send_to_self=True, memo="common_features")
+        self.store(key='feature_presence_matrix', value=feature_presence_matrix)
+        logging.info(
+            "[global_feature_selection] Data was set to be broadcasted. Transitioning to feature_presence_matrix"
+        )
+        return 'validate'
+
+@app_state('validate')
+class ValidationState(AppState):
+    def register(self):
+        self.register_transition('first_step', Role.BOTH)
+
+    def run(self):
+        # obtain and safe common genes and indices of design matrix
+        logging.info("[validate] waiting for common features and covariates")
+        global_feauture_names, cohorts_order = self.await_data(n=1, is_json=False, memo="common_features")
+        global_variables = self.load("global_variables")
+        client = self.load('client')
+
+        client.validate_inputs(global_variables)
+        logging.info("[validate] Inputs have been validated")
+        client.set_data(global_feauture_names)
+        logging.info("[validate] Data has been set to contain all global features")
+
+        # get all client names to generate design matrix
+        client.create_design(cohorts_order)
+        logging.info(f"[validate] Design matrix has been created with shape {client.design.shape}")
+        logging.info("[validate] design has been created")
+        self.store(key='client', value=client)
+        return 'first_step'
+
+
+@app_state('first_step')
+class FirstCombatStep(AppState):
+    def register(self):
+        self.register_transition('apply_correction')
+
+    def run(self):
+        logging.info("[ComBat-first_step:] Starting the first step of ComBat")
+        client = self.load('client')
+        logging.info(f"[ComBat-first_step:] Adjusting for {len(client.variables)} covariate(s) or covariate level(s)")
+        
+        
+
+        return 'apply_correction'
+
+
+@app_state('apply_correction')
+class ApplyCorrectionState(AppState):
+    def register(self):
+        self.register_transition('terminal')
+
+    def run(self):
+        logging.info("[apply_correction] Applying batch correction")
+        # # wait for the coordinator to calcualte beta
+        # beta = self.await_data(n=1, is_json=False, memo="beta")
+        # client = self.load('client')
+
+        # # remove the batch effects in own data and safe the results
+        # client.remove_batch_effects(beta)
+        # print(f"DEBUG: Shape of corrected data: {client.data_corrected.shape}")
+        # client.data_corrected.to_csv(
+        #     os.path.join(os.getcwd(), "mnt", "output", "batch_corrected_data.csv"),
+        #     sep=self.load("separator")
+        # )
+        # with open(os.path.join(os.getcwd(), "mnt", "output", "report.txt"), "w") as f:
+        #     f.write(client.report)
+        return 'terminal'
