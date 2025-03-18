@@ -632,4 +632,97 @@ class Client:
                 y_valid = y[valid]
                 XtX[i] = x_valid.T @ x_valid
                 XtY[i] = x_valid.T @ y_valid
+
+        self.XtX = XtX
+        self.XtY = XtY
         return XtX, XtY
+
+    def get_sigma_summary(
+            self,
+            B_hat: np.ndarray,
+            ref_size: np.ndarray
+        ) -> np.ndarray:
+        """
+        Computes the sigma summary matrix for the ComBat algorithm.
+
+        Args:
+            XtX: The aggregated XtX matrix of shape n x k x k.
+            B_hat: The B_hat matrix of shape k x n.
+
+        Returns:
+            The sigma summary matrix of shape n x n.
+        """
+        # Helper to compute row-wise variance ignoring NaNs with ddof=1 (unbiased estimate)
+        # This returns an array of variances (one per row).
+        def row_vars(x):
+            return np.nanvar(x, axis=1, ddof=1)
+
+        n_array = np.sum(ref_size)
+        factor = n_array / (n_array - 1)
+        # Explicitly transpose correctly (B_hat shape: k x n_features)
+        fitted = (self.design.values @ B_hat).T  # shape: (n_features, n_samples)
+        
+        diff = self.data.values - fitted  # shape: (n_features, n_samples)
+        var_unbiased = row_vars(diff)  # variance per feature (row)
+        var_pooled = var_unbiased / factor
+
+        return var_pooled  # (n_features,)
+    
+    def get_standardized_data(
+        self, 
+        B_hat: np.ndarray, 
+        stand_mean: np.ndarray,
+        var_pooled: np.ndarray,
+        ref_size: np.ndarray
+        ):
+        """
+        Computes the standardized data matrix for the ComBat algorithm.
+        
+        Args:
+            B_hat: The B_hat matrix of shape k x n.
+            stand_mean: The mean of the standardized data matrix of shape n_features.
+            var_pooled: The pooled variance of the standardized data matrix of shape n_features.
+            ref_size: The reference size of the standardized data matrix of shape n_features.
+        """
+        
+        # get mod_mean
+        tmp = self.design.copy()
+        tmp.iloc[:, :len(ref_size)] = 0
+        # mod.mean: (tmp @ B_hat) is (samples x features); transpose gives (features x samples)
+        mod_mean = (tmp @ B_hat).T
+        self.logger.info("mod_mean shape: %s", mod_mean.shape)
+
+        # Divide each row by the standard deviation (sqrt of var_pooled); replicating across columns.
+        self.stand_data = (self.data.values - stand_mean - mod_mean) / np.outer(np.sqrt(var_pooled), np.ones(np.sum(ref_size)))
+        self.logger.info("Data standardized, shape: %s", self.stand_data.shape)
+
+
+    def get_naive_estimates(self):
+        """
+        Computes the naive estimates for the ComBat algorithm.
+        """
+        batch_design = self.design.iloc[:, :len(self.batch_labels)]
+        # self.batch_labels
+        n_features = self.data.shape[0]
+
+        gamma_hat = np.linalg.inv(batch_design.T @ batch_design) @ batch_design.T @ self.stand_data.T
+        self.logger.info("Computed gamma_hat, shape: %s", gamma_hat.shape)
+
+        # Compute delta.hat for each batch.
+        # Loop over batches in a fixed order (e.g., sorted by batch label)
+        delta_hat_rows = []
+        for label in self.batch_labels:
+            # if label has 1 in client column, then it is the client's batch
+            indices = self.design[label] == 1
+            s_data = self.stand_data[indices, :]
+            delta_row = np.nanvar(s_data, axis=0, ddof=1)
+            delta_hat_rows.append(delta_row)
+        delta_hat = np.vstack(delta_hat_rows)  # shape: (n_batches, n_features)
+        self.logger.info("Computed delta_hat, shape: %s", delta_hat.shape)
+
+        self.gamma_hat = gamma_hat
+        self.delta_hat = delta_hat
+        self.logger.info("Computed naive estimates.")
+
+
+    

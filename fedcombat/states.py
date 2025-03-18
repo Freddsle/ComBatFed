@@ -133,7 +133,7 @@ class ValidationState(AppState):
 @app_state('first_step')
 class FirstCombatStep(AppState):
     def register(self):
-        self.register_transition('apply_correction', Role.PARTICIPANT)
+        self.register_transition('get_estimates', Role.PARTICIPANT)
         self.register_transition('compute_b_hat', Role.COORDINATOR)
 
     def run(self):
@@ -148,6 +148,10 @@ class FirstCombatStep(AppState):
         design_cols = client.design.shape[1]
         ref_size = [sum(client.design.iloc[:, i]) for i in range(design_cols - len(client.variables))]
 
+        # save XtX and XtY
+        self.store(key="XtX", value=XtX)
+        self.store(key="XtY", value=XtY)
+
         # send the data to the coordinator
         self.send_data_to_coordinator([XtX, XtY, ref_size], send_to_self=True, use_smpc=client.smpc)
         logging.info("[ComBat-first_step:] Computation done, sending data to coordinator")
@@ -156,13 +160,13 @@ class FirstCombatStep(AppState):
         # If the client is the coordinator, we can move to the next step
         if self.is_coordinator:
             return 'compute_b_hat'
-        return 'apply_correction'
+        return 'get_estimates'
 
 
 @app_state('compute_b_hat')
 class ComputeBHatState(AppState):
     def register(self):
-        self.register_transition('apply_correction')
+        self.register_transition('get_estimates', Role.COORDINATOR)
 
     def run(self):
         logging.info("[Compute_b_hat] Computing b_hat")
@@ -176,7 +180,6 @@ class ComputeBHatState(AppState):
         XtX_global, XtY_global, ref_size = c_utils.aggregate_XtX_XtY(XtX_XtY_lists, n=n, k=k, use_smpc=client.smpc)
         self.store(key="XtX_global", value=XtX_global)
         self.store(key="XtY_global", value=XtY_global)
-        self.store(key="ref_size", value=ref_size)
 
         # Compute B.hat = inv(ls1) @ ls2.
         B_hat = c_utils.compute_B_hat(XtX_global, XtY_global)
@@ -187,27 +190,88 @@ class ComputeBHatState(AppState):
         self.store(key="grand_mean", value=grand_mean)
         self.store(key="stand_mean", value=stand_mean)
         self.log("[Compute_b_hat:] Grand mean and stand mean have been computed.")
-        return 'apply_correction'
+
+        # send B_hat and stand_mean to all clients
+        self.broadcast_data([B_hat, stand_mean, ref_size], send_to_self=True, memo="B_hat")
+        return 'get_estimates'
 
 
 @app_state('get_estimates')
 class GetEstimatesState(AppState):
     def register(self):
-        self.register_transition('terminal')
+        self.register_transition('calculate_estimates', Role.PARTICIPANT)
+        self.register_transition('pooled_variance', Role.COORDINATOR)
 
     def run(self):
         logging.info("[get_estimates] Getting L/S estimates...")
+        client = self.load('client')        
+        # get the B_hat and stand_mean
+        B_hat, stand_mean, ref_size = self.await_data(n=1, is_json=False, memo="B_hat")
+
+        # save the B_hat and stand_mean
+        self.store(key="B_hat", value=B_hat)
+        self.store(key="stand_mean", value=stand_mean)
+        self.store(key="ref_size", value=ref_size)
+        XtX = self.load("XtX")
+        XtY = self.load("XtY")
+
+        # get the L/S estimates
+        sigma_site = client.get_sigma_summary(B_hat, stand_mean)
+        self.store(key="sigma_site", value=sigma_site)
+        self.log(f"[get_estimates:] L/S estimates have been computed. Sigma site has been computed, shape: {sigma_site.shape}")
+
+        # send the sigma_site to the coordinator
+        self.send_data_to_coordinator(sigma_site, send_to_self=True, use_smpc=False)
+        self.log("[get_estimates:] Sigma site has been sent to the coordinator.")
+        if self.is_coordinator:
+            return 'pooled_variance'
+        return 'standardize_data'
+
+
+@app_state('pooled_variance')
+class PooledVarianceState(AppState):
+    def register(self):
+        self.register_transition('standardize_data', Role.COORDINATOR)
+
+    def run(self):
+        logging.info("[pooled variance] Getting pooled variance")
+        var_list = self.gather_data(is_json=False, use_smpc=False)
+
+        # get the pooled variance
+        pooled_variance = c_utils.get_pooled_variance(var_list, self.load("ref_size"))
+        self.store(key="pooled_variance", value=pooled_variance)
+        self.log(f"[pooled variance:] Pooled variance has been computed, shape: {pooled_variance.shape}")
+
+        # send the pooled variance to all clients
+        self.broadcast_data(pooled_variance, send_to_self=True, memo="pooled_variance")
+        return 'standardize_data'
+
+@app_state('standardize_data')
+class CalculateEstimatesState(AppState):
+    def register(self):
+        self.register_transition('apply_correction', Role.BOTH)
+
+    def run(self):
+        logging.info("[calculate_estimates] Calculating estimates")
+        pooled_variance = self.await_data(n=1, is_json=False, memo="pooled_variance")
+        self.log("[calculate_estimates] Pooled variance has been received.")
+        self.store(key="pooled_variance", value=pooled_variance)
+
         client = self.load('client')
-        B_hat = self.load("B_hat")
-        grand_mean = self.load("grand_mean")
-        stand_mean = self.load("stand_mean")
-        XtX_global = self.load("XtX_global")
-        XtY_global = self.load("XtY_global")
-        ref_size = self.load("ref_size")
-        client.get_estimates(B_hat, grand_mean, stand_mean, XtX_global, XtY_global, ref_size)
-        return 'terminal'
+        self.log("[calculate_estimates] Getting standardized data...")
+        client.get_standardized_data(
+            self.load("B_hat"),
+            self.load("stand_mean"),
+            self.load("pooled_variance"),
+            self.load("ref_size")
+        )
+        self.log("[calculate_estimates] Standardized data has been computed.")
+
+        # Get naive estimators
+        client.get_naive_estimates()
 
 
+        return 'apply_correction'
 
 @app_state('apply_correction')
 class ApplyCorrectionState(AppState):

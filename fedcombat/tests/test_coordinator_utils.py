@@ -7,6 +7,7 @@ from classes.coordinator_utils import (
     aggregate_XtX_XtY,
     compute_B_hat,
     compute_mean,
+    get_pooled_variance,
     FeatureBatchInfoType  # if exported, otherwise, use Tuple[str, Union[int, None], Union[str, bool, None], dict]
 )
 
@@ -233,5 +234,35 @@ class TestComputeMean(unittest.TestCase):
         assert_array_almost_equal(grand_mean, expected_grand_mean)
         assert_array_almost_equal(stand_mean, expected_stand_mean)
 
+
+class TestGetPooledVariance(unittest.TestCase):
+
+    def test_get_pooled_variance_valid(self):
+        vars_list = [np.array([2.0, 4.0]), np.array([6.0, 8.0])]
+        ref_size = np.array([10, 20])
+
+        pooled_var = get_pooled_variance(vars_list, ref_size)
+        expected_pooled_var = (10 * vars_list[0] + 20 * vars_list[1]) / 30
+
+        assert_array_almost_equal(pooled_var, expected_pooled_var)
+
+    def test_get_pooled_variance_single_client(self):
+        vars_list = [np.array([5.0, 7.0])]
+        ref_size = np.array([15])
+
+        pooled_var = get_pooled_variance(vars_list, ref_size)
+        expected_pooled_var = vars_list[0]
+
+        assert_array_equal(pooled_var, expected_pooled_var)
+
+    def test_get_pooled_variance_empty_vars_list(self):
+        vars_list = []
+        ref_size = np.array([])
+
+        with self.assertRaises(IndexError):
+            get_pooled_variance(vars_list, ref_size)
+
+
 if __name__ == '__main__':
     unittest.main()
+

@@ -166,7 +166,6 @@ def aggregate_XtX_XtY(
 
     return XtX_global, XtY_global, ref_size
 
-
 def compute_B_hat(
     XtX_global: np.ndarray,
     XtY_global: np.ndarray
@@ -206,6 +205,7 @@ def compute_mean(
         XtX_global: The aggregated XtX matrix of shape n x k x k.
         XtY_global: The aggregated XtY matrix of shape n x k.
         B_hat: The B_hat matrix of shape k x n.
+        ref_size: The number of samples in each batch.
     Returns:
         grand_mean: The grand mean vector of shape n.
         stand_mean: The standardized mean matrix of shape n x k.
@@ -223,3 +223,28 @@ def compute_mean(
     logger.info(f"Grand mean shape: {grand_mean.shape}, stand mean shape: {stand_mean.shape}")
     logger.info(f"XtX_global shape: {XtX_global.shape}, XtY_global shape: {XtY_global.shape}")
     return grand_mean, stand_mean
+
+
+def get_pooled_variance(
+    vars_list: List[float],
+    ref_size: np.ndarray
+) -> float:
+    """
+    Computes the pooled variance for the ComBat algorithm.
+    Args:
+        var_list: A list of variances.
+        ref_size: The number of samples in each batch.
+    Returns:
+        pooled_var: The pooled variance.
+    """
+    total_clients = len(ref_size)
+    ref_size = np.array(ref_size)
+    total_samples = np.sum(ref_size)
+
+    # Compute the weighted average of variance estimates across sites.
+    var_pooled = np.zeros_like(vars_list[0])
+    for i in range(total_clients):
+        var_pooled += ref_size[i] * vars_list[i]
+    var_pooled = var_pooled / total_samples
+
+    return var_pooled
