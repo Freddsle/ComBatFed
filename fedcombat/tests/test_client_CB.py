@@ -39,7 +39,7 @@ def test_compute_XtX_XtY_complete(dummy_client):
     """
     Test compute_XtX_XtY when all data values are finite.
     """
-    XtX, XtY = dummy_client.compute_XtX_XtY()
+    XtX, XtY  = dummy_client.compute_XtX_XtY()
     # Expected shapes: (n_features, k, k) and (n_features, k)
     n_features = dummy_client.data.shape[0]  # 2 features
     k = dummy_client.design.shape[1]           # 3 predictors

@@ -1,9 +1,12 @@
 import unittest
 import numpy as np
+from numpy.testing import assert_array_equal, assert_array_almost_equal
 from classes.coordinator_utils import (
     create_feature_presence_matrix,
     select_common_features_variables,
     aggregate_XtX_XtY,
+    compute_B_hat,
+    compute_mean,
     FeatureBatchInfoType  # if exported, otherwise, use Tuple[str, Union[int, None], Union[str, bool, None], dict]
 )
 
@@ -138,8 +141,8 @@ class TestAggregateXtX_XtY(unittest.TestCase):
         
         # Create the list of client matrices
         XtX_XtY_lists = [
-            (client1_XtX.tolist(), client1_XtY.tolist()),
-            (client2_XtX.tolist(), client2_XtY.tolist())
+            (client1_XtX.tolist(), client1_XtY.tolist(), 5),
+            (client2_XtX.tolist(), client2_XtY.tolist(), None)
         ]
         
         # Expected results computed by summing the two clients.
@@ -147,7 +150,7 @@ class TestAggregateXtX_XtY(unittest.TestCase):
         expected_XtY = client1_XtY + client2_XtY
         
         # Run the aggregator
-        XtX_global, XtY_global = aggregate_XtX_XtY(XtX_XtY_lists, n=n, k=k)
+        XtX_global, XtY_global, _ = aggregate_XtX_XtY(XtX_XtY_lists, n=n, k=k)
         
         # Validate the results
         np.testing.assert_array_equal(XtX_global, expected_XtX)
@@ -166,8 +169,8 @@ class TestAggregateXtX_XtY(unittest.TestCase):
         invalid_XtY = np.zeros((n, k))
         
         XtX_XtY_lists = [
-            (valid_XtX.tolist(), valid_XtY.tolist()),
-            (invalid_XtX.tolist(), invalid_XtY.tolist())
+            (valid_XtX.tolist(), valid_XtY.tolist(), None),
+            (invalid_XtX.tolist(), invalid_XtY.tolist(), 5)
         ]
         
         # Expect a ValueError indicating a shape mismatch.
@@ -175,6 +178,60 @@ class TestAggregateXtX_XtY(unittest.TestCase):
             aggregate_XtX_XtY(XtX_XtY_lists, n=n, k=k)
         self.assertIn("Shape of received XtX or XtY does not match the expected shape", str(context.exception))
 
+
+class TestComputeBHat(unittest.TestCase):
+
+    def test_compute_B_hat_valid(self):
+        XtX_global = np.array([
+            [[2, 0], [0, 2]],
+            [[1, 0], [0, 1]]
+        ])
+        XtY_global = np.array([
+            [2, 4],
+            [1, 1]
+        ])
+
+        B_hat = compute_B_hat(XtX_global, XtY_global)
+        expected_B_hat = np.array([
+            [1, 1],
+            [2, 1]
+        ])
+
+        assert_array_almost_equal(B_hat, expected_B_hat)
+
+    def test_compute_B_hat_singular(self):
+        XtX_global = np.array([
+            [[1, 1], [1, 1]],  # Singular
+            [[1, 0], [0, 1]]
+        ])
+        XtY_global = np.array([
+            [2, 2],
+            [1, 1]
+        ])
+
+        with self.assertRaises(ValueError) as ctx:
+            compute_B_hat(XtX_global, XtY_global)
+        self.assertIn("singular and cannot be inverted", str(ctx.exception))
+
+
+class TestComputeMean(unittest.TestCase):
+
+    def test_compute_mean_valid(self):
+        XtX_global = np.zeros((2, 2, 2))  # Not used, placeholder
+        XtY_global = np.zeros((2, 2))     # Not used, placeholder
+        B_hat = np.array([
+            [1, 2],
+            [3, 4]
+        ])
+        ref_size = np.array([3, 7])
+
+        grand_mean, stand_mean = compute_mean(XtX_global, XtY_global, B_hat, ref_size)
+
+        expected_grand_mean = (3 * B_hat[0] + 7 * B_hat[1]) / 10
+        expected_stand_mean = np.outer(expected_grand_mean, np.ones(10))
+
+        assert_array_almost_equal(grand_mean, expected_grand_mean)
+        assert_array_almost_equal(stand_mean, expected_stand_mean)
 
 if __name__ == '__main__':
     unittest.main()

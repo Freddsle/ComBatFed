@@ -179,17 +179,26 @@ def compute_B_hat(
     Returns:
         B_hat: The B_hat matrix of shape k x n.
     """
-    try:
-        XtX_global_inv = np.linalg.inv(XtX_global)
-    except np.linalg.LinAlgError:
-        raise ValueError("The XtX_global matrix is singular and cannot be inverted.")
-    B_hat = XtX_global_inv @ XtY_global  # B_hat has shape (k x n)
+    logger.info("Computing B_hat")
+    XtX_global_inv = np.zeros((XtX_global.shape[0], XtX_global.shape[1], XtX_global.shape[2]))
+    B_hat = np.zeros((XtX_global.shape[1], XtX_global.shape[0]))
+    
+    for i in range(XtX_global.shape[0]):
+        try:
+            XtX_global_inv[i, :, :] = np.linalg.inv(XtX_global[i, :, :])
+        except np.linalg.LinAlgError:
+            raise ValueError("The XtX_global matrix is singular and cannot be inverted.")
+    
+        B_hat[:, i] = XtX_global_inv[i, :, :] @ XtY_global[i, :]
+
+    logger.info("B_hat has been computed")
     return B_hat
 
 def compute_mean(
     XtX_global: np.ndarray,
     XtY_global: np.ndarray,
-    B_hat: np.ndarray
+    B_hat: np.ndarray,
+    ref_size: np.ndarray
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Computes the grand mean and standardized mean for the ComBat algorithm.
@@ -203,11 +212,14 @@ def compute_mean(
     """
     # Compute the grand mean:
     # Compute weighted average of the first n_batch rows of B_hat.
-    # The weights are n_batches_arr / n_array.
-    weights = n_batches_arr / n_array  # shape (n_batch,)
+    # The weights are ref_size / sum(ref_size).
+    ref_size = np.array(ref_size)
+    weights = ref_size / np.sum(ref_size)  # shape (n_batch,)
     # B_hat[0:n_batch, :] has shape (n_batch, features)
-    grand_mean = weights @ B_hat[0:n_batch, :] 
-    
+    grand_mean = weights @ B_hat[0:len(ref_size), :] 
     # Replicate grand_mean to create stand_mean, a matrix of shape (features, n_array)
-    stand_mean = np.outer(grand_mean, np.ones(n_array))
+    stand_mean = np.outer(grand_mean, np.ones(np.sum(ref_size)))
+    logger.info("Grand mean and stand mean have been computed")
+    logger.info(f"Grand mean shape: {grand_mean.shape}, stand mean shape: {stand_mean.shape}")
+    logger.info(f"XtX_global shape: {XtX_global.shape}, XtY_global shape: {XtY_global.shape}")
     return grand_mean, stand_mean

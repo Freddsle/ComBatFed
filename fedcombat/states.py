@@ -101,7 +101,7 @@ class GlobalFeatureSelection(AppState):
                             send_to_self=True, memo="common_features")
         self.store(key='feature_presence_matrix', value=feature_presence_matrix)
         logging.info(
-            "[global_feature_selection] Data was set to be broadcasted. Transitioning to feature_presence_matrix"
+            "[global_feature_selection] Transitioning to validation step."
         )
         return 'validate'
 
@@ -145,9 +145,11 @@ class FirstCombatStep(AppState):
         
         # getting XtX and Xty
         XtX, XtY = client.compute_XtX_XtY()
+        design_cols = client.design.shape[1]
+        ref_size = [sum(client.design.iloc[:, i]) for i in range(design_cols - len(client.variables))]
 
         # send the data to the coordinator
-        self.send_data_to_coordinator([XtX, XtY], send_to_self=True, use_smpc=client.smpc)
+        self.send_data_to_coordinator([XtX, XtY, ref_size], send_to_self=True, use_smpc=client.smpc)
         logging.info("[ComBat-first_step:] Computation done, sending data to coordinator")
         logging.info(f"[ComBat-first_step:] XtX of shape {XtX.shape}, X of shape {client.design.shape}, XtY of shape {XtY.shape}")
 
@@ -167,20 +169,43 @@ class ComputeBHatState(AppState):
         client = self.load('client')
         n = client.data.values.shape[0]
         k = client.design.shape[1]
-        XtX_XtY_lists = self.gather_data(is_json=False, n=n, k=k, use_smpc=client.smpc)
+        XtX_XtY_lists = self.gather_data(is_json=False, use_smpc=client.smpc)
         self.log("[ComBat-first_step:] Got XtX_XtY_list from gathered data.")
 
         # Aggregate the XtX and XtY values from all clients
-        XtX_global, XtY_global = c_utils.aggregate_XtX_XtY(XtX_XtY_lists, client.smpc)
+        XtX_global, XtY_global, ref_size = c_utils.aggregate_XtX_XtY(XtX_XtY_lists, n=n, k=k, use_smpc=client.smpc)
         self.store(key="XtX_global", value=XtX_global)
         self.store(key="XtY_global", value=XtY_global)
+        self.store(key="ref_size", value=ref_size)
 
         # Compute B.hat = inv(ls1) @ ls2.
         B_hat = c_utils.compute_B_hat(XtX_global, XtY_global)
         self.store(key="B_hat", value=B_hat)
         self.log("[Compute_b_hat:] B_hat has been computed.")
         # Compute the grand mean and stand_mean
-        grand_mean, stand_mean = c_utils.compute_mean(XtX_global, XtY_global, B_hat)
+        grand_mean, stand_mean = c_utils.compute_mean(XtX_global, XtY_global, B_hat, ref_size)
+        self.store(key="grand_mean", value=grand_mean)
+        self.store(key="stand_mean", value=stand_mean)
+        self.log("[Compute_b_hat:] Grand mean and stand mean have been computed.")
+        return 'apply_correction'
+
+
+@app_state('get_estimates')
+class GetEstimatesState(AppState):
+    def register(self):
+        self.register_transition('terminal')
+
+    def run(self):
+        logging.info("[get_estimates] Getting L/S estimates...")
+        client = self.load('client')
+        B_hat = self.load("B_hat")
+        grand_mean = self.load("grand_mean")
+        stand_mean = self.load("stand_mean")
+        XtX_global = self.load("XtX_global")
+        XtY_global = self.load("XtY_global")
+        ref_size = self.load("ref_size")
+        client.get_estimates(B_hat, grand_mean, stand_mean, XtX_global, XtY_global, ref_size)
+        return 'terminal'
 
 
 

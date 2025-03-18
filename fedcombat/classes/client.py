@@ -234,48 +234,90 @@ class Client:
         """
         # Validate required attributes
         if not isinstance(self.data, pd.DataFrame):
-            raise ValueError("Data must be a pandas DataFrame.")
+            error_msg = "Data must be a pandas DataFrame."
+            self.logger.error(error_msg)
+            raise ValueError(error_msg)
         if not isinstance(self.feature_names, list):
-            raise ValueError("feature_names must be a list.")
+            error_msg = "feature_names must be a list."
+            self.logger.error(error_msg)
+            raise ValueError(error_msg)
         if self.design is None or not isinstance(self.design, pd.DataFrame):
-            raise ValueError("Design must be a pandas DataFrame.")
+            error_msg = "Design must be a pandas DataFrame."
+            self.logger.error(error_msg)
+            raise ValueError(error_msg)
         
-        self.logger.info(
-            f"Each feature must have at least {min_samples} samples in a batch to be considered for correction. "
-            "Otherwise, privacy cannot be guaranteed."
-        )
+        # Log initial data info
+        self.logger.info(f"Feature count: {len(self.feature_names)}")
 
+        # Check that feature_names match the DataFrame index (if possible)
+        if not set(self.feature_names).issubset(set(self.data.index)):
+            missing_features = set(self.feature_names) - set(self.data.index)
+            error_msg = f"The following feature names are not in the data index: {missing_features}"
+            self.logger.error(error_msg)
+            raise ValueError(error_msg)
+        
         # Initialize dictionary for batch feature presence info
         batch_feature_presence_info = {batch: [] for batch in self.batch_labels}
 
         # 1. Privacy check per batch: Ensure that each batch has at least 2 non-NaN samples per feature.
         if self.batch_col:
+            # transform values in self.design[self.batch_col] into string to avoid type mismatch
+            self.design[self.batch_col] = self.design[self.batch_col].astype(str)
             for batch_label in self.batch_labels:
                 # Extract the pure batch name from the label (expected format: "client|batch")
-                pure_batch_name = batch_label.split("|")[1] if "|" in batch_label else batch_label
+                if "|" in batch_label:
+                    parts = batch_label.split("|")
+                    if len(parts) < 2:
+                        error_msg = f"Batch label '{batch_label}' is not formatted correctly."
+                        self.logger.error(error_msg)
+                        raise ValueError(error_msg)
+                    pure_batch_name = parts[1]
+                else:
+                    pure_batch_name = batch_label
+                
+                # Get batch indices from the design matrix
+                if self.batch_col not in self.design.columns:
+                    error_msg = f"Batch column '{self.batch_col}' not found in design matrix."
+                    self.logger.error(error_msg)
+                    raise ValueError(error_msg)
                 batch_indices = self.design[self.design[self.batch_col] == pure_batch_name].index.tolist()
-                batch_data = self.data.loc[:, batch_indices]
+                if not batch_indices:
+                    error_msg = f"No indices found in design for batch '{pure_batch_name}'."
+                    self.logger.error(error_msg)
+                    raise ValueError(error_msg)
+
+                # Check data subset for the batch
+                try:
+                    batch_data = self.data.loc[:, batch_indices]
+                except Exception as e:
+                    error_msg = f"Error accessing batch data for indices {batch_indices}: {e}"
+                    self.logger.error(error_msg)
+                    raise ValueError(error_msg)
+                
                 non_nan_counts = batch_data.notnull().sum(axis=1)
+                
                 # Identify features with exactly 1 non-NaN sample in this batch
                 ignore_features = non_nan_counts[non_nan_counts == 1].index.tolist()
                 if ignore_features:
                     self.logger.info(
-                        f"Ignoring {len(ignore_features)} features for batch {batch_label} due to privacy reasons."
+                        f"Ignoring {len(ignore_features)} features for batch {batch_label} due to privacy reasons (exactly one non-NaN sample)."
                     )
                 # Set the values for these features in this batch to NaN
                 self.data.loc[ignore_features, batch_indices] = np.nan
-                # remove features with NA values
+
+                # Log the number of features completely dropped after batch-level privacy check
+                before_drop_shape = self.data.shape[0]
                 self.data = self.data.dropna(axis=0, how='all')
-                
+                after_drop_shape = self.data.shape[0]
+                self.logger.info(f"Dropped {before_drop_shape - after_drop_shape} features completely empty after processing batch '{batch_label}'.")
 
         # 2. Global privacy check: Features must have at least min_samples non-NaN entries across the client.
         non_nan_counts = self.data.notnull().sum(axis=1)
         ignore_features_global = non_nan_counts[non_nan_counts < min_samples].index.tolist()
         if ignore_features_global:
             self.logger.info(
-                f"Ignoring {len(ignore_features_global)} features for client {self.client_name} due to privacy reasons."
+                f"Ignoring {len(ignore_features_global)} features for client {self.client_name} due to privacy reasons (fewer than {min_samples} non-NaN samples)."
             )
-        # remove features with less than min_samples non-NaN entries
         self.data = self.data.drop(index=ignore_features_global, errors='ignore')
 
         # 3. Determine feature presence for each batch.
@@ -283,18 +325,33 @@ class Client:
             if self.batch_col:
                 pure_batch_name = batch_label.split("|")[1] if "|" in batch_label else batch_label
                 batch_indices = self.design[self.design[self.batch_col] == pure_batch_name].index.tolist()
-                batch_data = self.data.loc[:, batch_indices]
+                if not batch_indices:
+                    error_msg = f"No indices found in design for batch '{pure_batch_name}' during feature presence determination."
+                    self.logger.error(error_msg)
+                    raise ValueError(error_msg)
+                try:
+                    batch_data = self.data.loc[:, batch_indices]
+                except Exception as e:
+                    error_msg = f"Error accessing batch data for batch '{batch_label}': {e}"
+                    self.logger.error(error_msg)
+                    raise ValueError(error_msg)
             else:
                 batch_data = self.data
 
+            self.logger.info(f"Checking feature presence in batch '{batch_label}' with {batch_data.shape[1]} samples.")
             for feature in self.feature_names:
                 # If the feature exists and at least one sample is non-NaN in this batch
-                if feature in batch_data.index and not batch_data.loc[feature].isnull().all():
-                    batch_feature_presence_info[batch_label].append(feature)
+                if feature in batch_data.index:
+                    if not batch_data.loc[feature].isnull().all():
+                        batch_feature_presence_info[batch_label].append(feature)
+                else:
+                    self.logger.warning(f"Feature '{feature}' not found in data index during batch '{batch_label}' processing.")
 
-        # raise an error if no features are available for correction
+        # Final check: Raise an error if no features are available for correction
         if not any(batch_feature_presence_info.values()):
-            raise ValueError("No features available for correction. Check the data and design matrix.")
+            error_msg = "No features available for correction. Check the data and design matrix after privacy filtering."
+            self.logger.error(error_msg)
+            raise ValueError(error_msg)
 
         return batch_feature_presence_info
 
