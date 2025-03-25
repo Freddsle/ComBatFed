@@ -272,14 +272,12 @@ class CalculateEstimatesState(AppState):
                 self.log("[calculate_estimates] Getting parametric Empirical Bayes estimates...")
             else:
                 self.log("[calculate_estimates] Getting non-parametric Empirical Bayes estimates...")
-            client.get_eb_estimates()
+            client.get_eb_estimators()
             self.log("[calculate_estimates] Empirical Bayes estimates have been computed.")
         else:
-            client.get_non_eb_estimates()
+            client.gamma_star = client.gamma_hat.copy()
+            client.delta_star = client.delta_hat.copy()
             self.log("[calculate_estimates] Non-Empirical Bayes estimates have been computed.")
-            
-            
-            
 
         return 'apply_correction'
 
@@ -290,17 +288,17 @@ class ApplyCorrectionState(AppState):
 
     def run(self):
         logging.info("[apply_correction] Applying batch correction")
-        # # wait for the coordinator to calcualte beta
-        # beta = self.await_data(n=1, is_json=False, memo="beta")
-        # client = self.load('client')
+        client = self.load('client')
 
-        # # remove the batch effects in own data and safe the results
-        # client.remove_batch_effects(beta)
-        # print(f"DEBUG: Shape of corrected data: {client.data_corrected.shape}")
-        # client.data_corrected.to_csv(
-        #     os.path.join(os.getcwd(), "mnt", "output", "batch_corrected_data.csv"),
-        #     sep=self.load("separator")
-        # )
+        pooled_variance = self.load("pooled_variance")
+        # remove the batch effects in own data and safe the results
+        corrected_data = client.get_corrected_data(pooled_variance)
+
+        logging.info("[apply_correction] Batch correction has been applied.")
+        corrected_data.to_csv(
+            os.path.join(os.getcwd(), "mnt", "output", "batch_corrected_data.csv"),
+            sep=self.load("separator")
+    )
         # with open(os.path.join(os.getcwd(), "mnt", "output", "report.txt"), "w") as f:
         #     f.write(client.report)
         return 'terminal'

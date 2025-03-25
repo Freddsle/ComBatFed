@@ -693,8 +693,8 @@ class Client:
         tmp = self.design.copy()
         tmp.iloc[:, :len(ref_size)] = 0
         # mod.mean: (tmp @ B_hat) is (samples x features); transpose gives (features x samples)
-        mod_mean = (tmp @ B_hat).T
-        self.logger.info("mod_mean shape: %s", mod_mean.shape)
+        self.mod_mean = (tmp @ B_hat).T
+        self.logger.info("mod_mean shape: %s", self.mod_mean.shape)
 
         selected_means = []
         positions = []
@@ -709,11 +709,13 @@ class Client:
             )
         selected_means = sorted(selected_means)
         # stand.mean[,1:n.array]
-        stand_mean = stand_mean[:, selected_means]
+        self.stand_mean = stand_mean[:, selected_means]
         
         # Divide each row by the standard deviation (sqrt of var_pooled); replicating across columns.
         self.logger.info("Standardizing data...")
-        self.stand_data = (self.data.values - stand_mean - mod_mean) / np.outer(np.sqrt(var_pooled), np.ones(len(selected_means)))
+        self.stand_data = (
+            self.data.values - self.stand_mean - self.mod_mean
+            ) / np.outer(np.sqrt(var_pooled), np.ones(len(selected_means)))
         self.logger.info("Data standardized, shape: %s", self.stand_data.shape)
 
 
@@ -721,7 +723,8 @@ class Client:
         """
         Computes the naive estimates for the ComBat algorithm.
         """
-        batch_design = self.design.loc[:, self.batch_labels].values
+        self.batch_design = self.design.loc[:, self.batch_labels]
+        batch_design = self.batch_design.values
         Y = self.stand_data.values    # shape: (n_features, n_samples)        
         gamma_hat = np.matmul(
             np.linalg.inv(
@@ -750,5 +753,278 @@ class Client:
         self.delta_hat = delta_hat
         self.logger.info("Computed naive estimates.")
 
+    def apriorMat(self, delta_hat: pd.DataFrame) -> pd.Series:
+        """
+        Computes the apriorMat for the given delta_hat DataFrame.
+        
+        Parameters:
+        -----------
+        delta_hat : pd.DataFrame
+            A DataFrame with rows as batches and columns as features.
+        
+        Returns:
+        --------
+        pd.Series
+            A pandas Series where each element corresponds to the computed value 
+            (2*s2 + m^2) / s2 for each row, with the index preserved from delta_hat.
+        """
+        # Compute row-wise means and variances.
+        m = delta_hat.mean(axis=1)
+        # ddof=1 uses sample variance; adjust if necessary.
+        s2 = delta_hat.var(axis=1, ddof=1)
+        
+        # Compute the apriorMat: (2*s2 + m^2) / s2.
+        out = (2 * s2 + m**2) / s2
+        return out
+
+    def bpriorMat(self, delta_hat: pd.DataFrame) -> pd.Series:
+        """
+        Computes the bpriorMat for the given delta_hat DataFrame.
+        
+        Parameters:
+        -----------
+        delta_hat : pd.DataFrame
+            A DataFrame with rows as batches and columns as features.
+        
+        Returns:
+        --------
+        pd.Series
+            A pandas Series where each element corresponds to the computed value 
+            (m*s2 + m^3) / s2 for each row, with the index preserved from delta_hat.
+        """
+        # Compute row-wise means and variances.
+        m = delta_hat.mean(axis=1)
+        s2 = delta_hat.var(axis=1, ddof=1)
+        
+        # Compute the bpriorMat: (m*s2 + m^3) / s2.
+        out = (m * s2 + m**3) / s2
+        return out
+
+    def postmean(self, g_hat, g_bar, n, d_star, t2):
+        """
+        Compute the posterior mean given the parameters.
+        
+        Parameters:
+        - g_hat: Estimated value
+        - g_bar: Prior mean value
+        - n: Sample size or weight for g_hat
+        - d_star: Weight for the prior mean g_bar
+        - t2: Scaling factor for the weight of g_hat
+        
+        Returns:
+        - The computed posterior mean.
+        """
+        return (t2 * n * g_hat + d_star * g_bar) / (t2 * n + d_star)
+
+    def biweight_midvar(self, data, center=None, axis=None):
+        if center is None:
+            center = np.median(data, axis=axis, keepdims=True)
+            
+        mad = np.median(abs(data - center), axis=axis, keepdims=True)
+        
+        d = data - center
+        u = d/(9*mad)
+        
+        indic = np.abs(u) < 1
+        
+        num = d * d * (1. - u**2)**4
+        num[~indic] = 0.
+        num = np.sum(num, axis=axis)
+        
+        dem = (1. - u**2) * (1. - 5.*u**2)
+        dem[~indic] = 0.
+        dem = np.abs(np.sum(dem, axis=axis))**2
+        
+        n = np.sum(np.ones(data.shape), axis=axis)
+        return n * num/dem
+
+    def postvar(self, sum2, n, a, b):
+        return (0.5 * sum2 + b) / (n / 2.0 + a - 1.0)
+
+    def it_sol(self, sdat, g_hat, d_hat, g_bar, t2, a, b, conv=0.0001, robust=False):
+        n = (1 - np.isnan(sdat)).sum(axis=1)
+        g_old = g_hat.copy()
+        d_old = d_hat.copy()
+        ones = np.ones((1, sdat.shape[1]))
+
+        change = 1
+        count = 0
+        while change > conv:
+            g_new = np.array(self.postmean(g_hat, g_bar, n, d_old, t2))
+            
+            if robust:
+                sum2 = n * self.biweight_midvar(
+                    sdat, center = g_new.reshape((g_new.shape[0], 1)), axis=1)
+                # sum2 = n*(1.482602218505602*np.median(abs(sdat - np.dot(g_new.reshape((g_new.shape[0], 1)), ones)), axis = 1)) ** 2
+            else:
+                sum2 = ((sdat - np.dot(g_new.reshape((g_new.shape[0], 1)), ones)) ** 2).sum(
+                    axis=1
+                )
+            
+            d_new = self.postvar(sum2, n, a, b)
+            change = max(max(abs(g_new - g_old) / g_old), max(abs(d_new - d_old) / d_old))            
+            g_old = g_new
+            d_old = d_new
+            count = count + 1
+        adjust = (g_new, d_new)
+        return adjust
+
+    def int_eprior(self, sdat, g_hat, d_hat):
+        import math
+
+        r = sdat.shape[0]
+        gamma_star, delta_star = [], []
+        for i in range(0, r, 1):
+            g = np.delete(g_hat, i)
+            d = np.delete(d_hat, i)
+            x = sdat[i, :]
+            n = x.shape[0]
+            j = np.repeat(1, n)
+            A = np.repeat(x, g.shape[0])
+            A = A.reshape(n, g.shape[0])
+            A = np.transpose(A)
+            B = np.repeat(g, n)
+            B = B.reshape(g.shape[0], n)
+            resid2 = np.square(A - B)
+            sum2 = resid2.dot(j)
+            LH = 1 / (2 * math.pi * d) ** (n / 2) * np.exp(-sum2 / (2 * d))
+            LH = np.nan_to_num(LH)
+            gamma_star.append(sum(g * LH) / sum(LH))
+            delta_star.append(sum(d * LH) / sum(LH))
+        adjust = (gamma_star, delta_star)
+        return adjust
+
+    def get_parametric_estimators(self, t2, a_prior, b_prior):
+        """
+        Compute parametric EB estimators based on naive estimators.
+
+        Parameters:
+        t2 : Variance of gamma_hat (per feature).
+        a_prior : a_priorMat (per feature).
+        b_prior : b_priorMat (per feature).
+        """
+
+        delta_hat = self.delta_hat
+        s_data = self.stand_data.values
+        gamma_hat = self.gamma_hat
+        gamma_bar = self.gamma_bar
+
+        gamma_star_rows = []
+        delta_star_rows = []
+        for i, label in enumerate(self.batch_labels):
+            if self.mean_only:
+                gamma_star_row = self.postmean(gamma_hat[i, :], gamma_bar[i], 1, 1, t2[i])
+                delta_star_row = np.ones(s_data.shape[0])
+            else:
+                indices = np.where(self.design[label] == 1)[0]
+                temp = self.it_sol(
+                    self.delta_hat[:, indices],
+                              gamma_hat[i, :], delta_hat[i, :],
+                              gamma_bar[i], t2[i], a_prior[i], b_prior[i])
+                gamma_star_row = temp[0]
+                delta_star_row = temp[1]
+            
+            gamma_star_rows.append(gamma_star_row)
+            delta_star_rows.append(delta_star_row)
+        
+        self.gamma_star = np.vstack(gamma_star_rows)
+        self.delta_star = np.vstack(delta_star_rows)
+    
+    def get_nonparametric_estimators(self):
+        """
+        Compute non-parametric EB estimators based on naive estimators.
+        """
+        delta_hat = self.delta_hat
+        s_data = self.stand_data.values
+        gamma_hat = self.gamma_hat
+
+        gamma_star_rows = []
+        delta_star_rows = []
+        for i, label in enumerate(self.batch_labels):
+            if self.mean_only:
+                delta_hat[i, :] = 1
+            indices = np.where(self.design[label] == 1)[0]
+            temp = self.int_eprior(s_data.iloc[:, indices],
+                               gamma_hat[i, :], delta_hat[i, :])
+            gamma_star_rows.append(temp[0])
+            delta_star_rows.append(temp[1])
+        self.gamma_star = np.vstack(gamma_star_rows)
+        self.delta_star = np.vstack(delta_star_rows)
+
+    def get_eb_estimators(self):
+        """
+        Compute empirical Bayes (EB) estimators based on naive estimators.
+        
+        Parameters:
+        naive_estimators : Dictionary with "gamma.hat" and "delta.hat" (arrays: n_batches x n_features)
+        s_data           : Standardized data (features x samples)
+        data_dict        : Dictionary with keys "batches", "n.batch", "ref.batch", "ref"
+        parametric       : Boolean; if True use parametric EB, otherwise non-parametric.
+        mean_only        : Boolean.
+        
+        Returns:
+        A dictionary with EB estimators: "gamma.star", "delta.star", "gamma.bar", "t2", "a.prior", "b.prior"
+        """        
+        # Compute gamma.bar as the mean across batches (axis 0 of gamma_hat, per feature)
+        self.gamma_bar = np.nanmean(self.gamma_hat, axis=0)
+        # Compute t2 as the variance of gamma_hat (per feature)
+        # t2 = np.nanvar(self.gamma_hat, axis=0, ddof=1)
+        t2 = self.gamma_hat.var(ddof=1, axis=1)
+        
+        a_prior = self.apriorMat(self.delta_hat)
+        b_prior = self.bpriorMat(self.delta_hat)
+
+        if self.parametric:
+            self.get_parametric_estimators(t2, a_prior, b_prior)
+        else:
+            self.get_nonparametric_estimators()
+
+        self.logger.info("Computed EB estimators.")
+
+
+    def get_corrected_data(self, var_pooled):
+        """
+        Compute the corrected (combat-adjusted) data.
+        
+        Parameters:
+        var_pooled      : Pooled variance of the standardized data matrix (features x samples).
+
+        Returns:
+        bayesdata       : The corrected data matrix.
+        """
+        mod_mean = self.mod_mean
+        stand_mean = self.stand_mean
+        batch_design = self.batch_design        
+        if self.eb_param:
+            gamma_star = self.gamma_star
+            delta_star = self.delta_star
+        else:
+            gamma_star = self.gamma_hat
+            delta_star = self.delta_hat
+
+        bayesdata = self.stand_data.copy()
+        j = 0
+        
+        self.logger.info("Correcting data...")
+        for i, label in enumerate(self.batch_labels):
+            indices = np.where(self.design[label] == 1)[0]
+            fitted = (batch_design.iloc[indices, :] @ gamma_star).T 
+            top = bayesdata.iloc[:, indices] - fitted
+            bottom = np.outer(np.sqrt(delta_star[j, :]), np.ones(len(indices)))
+            bayesdata.iloc[:, indices] = top / bottom
+        
+        # Re-scale and add back the mean adjustments.
+        self.logger.info("Rescaling and adding back mean adjustments...")
+        self.logger.info("Data shape: %s", bayesdata.shape)
+        self.logger.info("var_pooled shape: %s", var_pooled.shape)
+        self.logger.info("stand_mean shape: %s", stand_mean.shape)
+        self.logger.info("mod_mean shape: %s", mod_mean.shape)
+        self.logger.info("indices shape: %s", len(indices))
+                         
+        bayesdata = (bayesdata * np.outer(np.sqrt(var_pooled), np.ones(len(indices)))) + stand_mean + mod_mean
+        self.logger.info("Data corrected, shape: %s", bayesdata.shape)
+        
+        return bayesdata
+    
 
     

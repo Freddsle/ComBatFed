@@ -414,3 +414,75 @@ def test_get_naive_estimates_without_standardization(dummy_client_combat):
     client = dummy_client_combat
     with pytest.raises(AttributeError):
         client.get_naive_estimates()
+
+
+@pytest.fixture
+def dummy_delta_hat():
+    """ Fixture creating a delta_hat DataFrame for apriorMat and bpriorMat tests. """
+    return pd.DataFrame({
+        'feat1': [1.0, 2.0],
+        'feat2': [3.0, 4.0],
+        'feat3': [5.0, 6.0]
+    }, index=['batch1', 'batch2'])
+
+
+def test_apriorMat(dummy_delta_hat):
+    client = Client()
+    result = client.apriorMat(dummy_delta_hat)
+    expected = (2 * dummy_delta_hat.var(axis=1, ddof=1) + dummy_delta_hat.mean(axis=1)**2) / dummy_delta_hat.var(axis=1, ddof=1)
+    pd.testing.assert_series_equal(result, expected)
+
+
+def test_bpriorMat(dummy_delta_hat):
+    client = Client()
+    result = client.bpriorMat(dummy_delta_hat)
+    m = dummy_delta_hat.mean(axis=1)
+    s2 = dummy_delta_hat.var(axis=1, ddof=1)
+    expected = (m * s2 + m**3) / s2
+    pd.testing.assert_series_equal(result, expected)
+
+
+def test_postmean():
+    client = Client()
+    g_hat, g_bar, n, d_star, t2 = 2.0, 1.0, 10, 5.0, 3.0
+    result = client.postmean(g_hat, g_bar, n, d_star, t2)
+    expected = (3.0 * 10 * 2.0 + 5.0 * 1.0) / (3.0 * 10 + 5.0)
+    assert np.isclose(result, expected)
+
+
+def test_biweight_midvar():
+    client = Client()
+    data = np.array([1, 2, 3, 4, 100])
+    result = client.biweight_midvar(data)
+    assert isinstance(result, float)
+
+
+def test_postvar():
+    client = Client()
+    sum2, n, a, b = 20.0, 10, 2.0, 3.0
+    result = client.postvar(sum2, n, a, b)
+    expected = (0.5 * 20.0 + 3.0) / (10 / 2.0 + 2.0 - 1.0)
+    assert np.isclose(result, expected)
+
+
+def test_it_sol():
+    client = Client()
+    sdat = np.array([[1.0, 2.0, np.nan], [2.0, 3.0, 4.0]])
+    g_hat = np.array([1.0, 2.0])
+    d_hat = np.array([1.0, 1.0])
+    g_bar, t2, a, b = 1.5, 0.5, 1.0, 2.0
+
+    gamma_new, delta_new = client.it_sol(sdat, g_hat, d_hat, g_bar, t2, a, b, conv=0.0001)
+    assert gamma_new.shape == g_hat.shape
+    assert delta_new.shape == d_hat.shape
+
+
+def test_int_eprior():
+    client = Client()
+    sdat = np.array([[1.0, 2.0], [3.0, 4.0]])
+    g_hat = np.array([0.5, 1.5])
+    d_hat = np.array([1.0, 2.0])
+
+    gamma_star, delta_star = client.int_eprior(sdat, g_hat, d_hat)
+    assert len(gamma_star) == sdat.shape[0]
+    assert len(delta_star) == sdat.shape[0]
