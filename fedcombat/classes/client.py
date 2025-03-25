@@ -26,6 +26,8 @@ class Client:
         self.variables: Optional[list] = None
         self.batch_labels: list = []
         self.min_samples: int = 0
+        self.eb_param: Optional[bool] = True
+        self.parametric: Optional[bool] = True
 
     def read_config(self, config: Dict[str, Any], input_folder: Path, client_name: str) -> Tuple[str, Optional[str], Optional[int]]:
         """
@@ -72,6 +74,11 @@ class Client:
         if position is not None and not isinstance(position, int):
             raise ValueError("Position must be an integer")
         self.position = position
+
+        # eb_param check
+        self.eb_param = config.get("eb_param", True)
+        if not isinstance(self.eb_param, bool):
+            raise ValueError("eb_param must be a boolean")
 
         # Validate batch column, if provided
         self.batch_col = config.get("batch_col_name")
@@ -537,7 +544,7 @@ class Client:
         if len(client_batches) == 1:
             self.logger.info(f"Client {self.client_name} has only one batch")
             for cohort in cohorts:
-                    self.design[cohort] = 1 if self.client_name == cohort.split("|")[0] else 0
+                self.design[cohort] = 1 if self.client_name == cohort.split("|")[0] else 0
         else:
             # For multiple batches, a valid batch column must be provided.
             if not self.batch_col:
@@ -553,7 +560,6 @@ class Client:
                     self.design[cohort_name] = 0
                     sample_indices = self.design[self.design[self.batch_col] == cohort_parts[1]].index
                     self.design.loc[sample_indices, cohort_name] = 1
-        
         
         # Remove the batch column from the design matrix if present.
         if self.batch_col and self.batch_col in self.design.columns:
@@ -572,7 +578,7 @@ class Client:
                         f"ERROR: the given variables {self.variables} were not found in the design matrix."
                     )
                     raise ValueError("Variables not found in the design matrix")
-            desired_order = list(cohorts) + list( self.variables)
+            desired_order = list(cohorts) + list(self.variables)
 
         self.design = self.design.loc[:, desired_order]
         
@@ -589,7 +595,6 @@ class Client:
                 self.logger.error("Some batches contain only one sample! Check for privacy.")
                 raise ValueError("Some batches contain only one sample. Check for privacy.")
             
-    
         return
     
 
@@ -684,7 +689,6 @@ class Client:
             var_pooled: The pooled variance of the standardized data matrix of shape n_features.
             ref_size: The reference size of the standardized data matrix of shape n_features.
         """
-        
         # get mod_mean
         tmp = self.design.copy()
         tmp.iloc[:, :len(ref_size)] = 0
@@ -692,8 +696,24 @@ class Client:
         mod_mean = (tmp @ B_hat).T
         self.logger.info("mod_mean shape: %s", mod_mean.shape)
 
+        selected_means = []
+        positions = []
+        for batch in self.batch_labels:
+            batch_pos_in_design = self.design.columns.get_loc(batch)
+            positions.append(batch_pos_in_design)
+            selected_means.extend(
+                range(
+                    sum(ref_size[:batch_pos_in_design]),
+                    sum(ref_size[:batch_pos_in_design + 1])
+                )
+            )
+        selected_means = sorted(selected_means)
+        # stand.mean[,1:n.array]
+        stand_mean = stand_mean[:, selected_means]
+        
         # Divide each row by the standard deviation (sqrt of var_pooled); replicating across columns.
-        self.stand_data = (self.data.values - stand_mean - mod_mean) / np.outer(np.sqrt(var_pooled), np.ones(np.sum(ref_size)))
+        self.logger.info("Standardizing data...")
+        self.stand_data = (self.data.values - stand_mean - mod_mean) / np.outer(np.sqrt(var_pooled), np.ones(len(selected_means)))
         self.logger.info("Data standardized, shape: %s", self.stand_data.shape)
 
 
@@ -701,21 +721,27 @@ class Client:
         """
         Computes the naive estimates for the ComBat algorithm.
         """
-        batch_design = self.design.iloc[:, :len(self.batch_labels)]
-        # self.batch_labels
-        n_features = self.data.shape[0]
-
-        gamma_hat = np.linalg.inv(batch_design.T @ batch_design) @ batch_design.T @ self.stand_data.T
+        batch_design = self.design.loc[:, self.batch_labels].values
+        Y = self.stand_data.values    # shape: (n_features, n_samples)        
+        gamma_hat = np.matmul(
+            np.linalg.inv(
+                np.matmul(batch_design.transpose(), batch_design)
+            ), batch_design.transpose(),)
+        gamma_hat = np.matmul(gamma_hat, Y.transpose())
         self.logger.info("Computed gamma_hat, shape: %s", gamma_hat.shape)
 
-        # Compute delta.hat for each batch.
+        # Compute delta.hat for each batch in this client.
         # Loop over batches in a fixed order (e.g., sorted by batch label)
         delta_hat_rows = []
-        for label in self.batch_labels:
-            # if label has 1 in client column, then it is the client's batch
-            indices = self.design[label] == 1
-            s_data = self.stand_data[indices, :]
-            delta_row = np.nanvar(s_data, axis=0, ddof=1)
+        n_features = self.stand_data.shape[0]
+        if self.mean_only:
+            delta_row = np.ones(n_features)
+        else:
+            for label in self.batch_labels:
+                indices = np.where(self.design[label] == 1)[0]
+                # Compute variance for each feature over the columns specified by indices.
+                # Use ddof=1 for unbiased estimator; nanvar ignores NaNs.
+                delta_row = np.nanvar(self.stand_data.iloc[:, indices], axis=1, ddof=1)
             delta_hat_rows.append(delta_row)
         delta_hat = np.vstack(delta_hat_rows)  # shape: (n_batches, n_features)
         self.logger.info("Computed delta_hat, shape: %s", delta_hat.shape)

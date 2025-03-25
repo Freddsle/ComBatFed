@@ -282,10 +282,11 @@ def test_get_standardized_data_complete_combat(dummy_client_combat):
         [0.1, -0.2, 0.0, 0.5],
         [0.3, 0.4, 0.1, -0.1]
     ])
-    # stand_mean and var_pooled are per feature (n_features,)
-    stand_mean = np.array([1.0, 2.0, 1.5, 2.5])
+    # var_pooled are per feature (n_features,)
     var_pooled = np.array([4.0, 9.0, 1.0, 16.0])
-    # ref_size: for simplicity, use an array with a single element equal to number of samples.
+    # stand_mean are per feature and sample (n_features,n_samples)
+    stand_mean = np.array([1.0, 2.0, 1.5, 2.5, 2.0] * n_features).reshape(n_features, n_samples)
+    
     ref_size = np.array([n_samples])
     
     # Call the function
@@ -303,7 +304,7 @@ def test_get_standardized_data_complete_combat(dummy_client_combat):
     D = np.outer(np.sqrt(var_pooled), np.ones(np.sum(ref_size)))  # shape: (4, 5)
     
     # Expected standardized data:
-    expected = (client.data.values - stand_mean.reshape(-1, 1) - mod_mean) / D
+    expected = (client.data.values - stand_mean - mod_mean) / D
 
     np.testing.assert_allclose(client.stand_data, expected, err_msg="Standardized data does not match expected values.")
 
@@ -323,7 +324,7 @@ def test_get_standardized_data_mismatched_shapes(dummy_client_combat):
         [0.3, 0.4, 0.1, -0.1],
         [0.2, 0.1, -0.3, 0.4]
     ])
-    stand_mean = np.array([1.0, 2.0, 1.5, 2.5])
+    stand_mean = np.array([1.0, 2.0, 1.5, 2.5, 2.0] * n_features).reshape(n_features, n_samples)
     var_pooled = np.array([4.0, 9.0, 1.0, 16.0])
     ref_size = np.array([n_samples])
     
@@ -350,7 +351,7 @@ def test_get_naive_estimates_complete_combat(dummy_client_combat):
         [0.1, -0.1, 0.0, 0.2],
         [0.3, 0.5, 0.2, 0.0]
     ])
-    stand_mean = np.array([2.0, 3.0, 2.5, 3.5])
+    stand_mean = np.array([2.0, 3.0, 2.5, 3.5] * n_samples).reshape(n_features, n_samples)
     var_pooled = np.array([9.0, 4.0, 16.0, 25.0])
     ref_size = np.array([n_samples])
     
@@ -362,7 +363,7 @@ def test_get_naive_estimates_complete_combat(dummy_client_combat):
     
     # For gamma_hat, the batch design is defined as the first len(batch_labels) columns of design.
     batch_labels = client.batch_labels  # e.g., ["batch1", "batch2"]
-    batch_design = client.design.iloc[:, :len(batch_labels)].values  # shape: (n_features, len(batch_labels))
+    batch_design = client.design.loc[:, batch_labels].values  # shape: (n_features, len(batch_labels))
     
     # NOTE: In the current implementation, gamma_hat is computed as:
     #    gamma_hat = inv(batch_design.T @ batch_design) @ batch_design.T @ stand_data.T

@@ -199,7 +199,7 @@ class ComputeBHatState(AppState):
 @app_state('get_estimates')
 class GetEstimatesState(AppState):
     def register(self):
-        self.register_transition('calculate_estimates', Role.PARTICIPANT)
+        self.register_transition('standardize_data', Role.PARTICIPANT)
         self.register_transition('pooled_variance', Role.COORDINATOR)
 
     def run(self):
@@ -212,8 +212,6 @@ class GetEstimatesState(AppState):
         self.store(key="B_hat", value=B_hat)
         self.store(key="stand_mean", value=stand_mean)
         self.store(key="ref_size", value=ref_size)
-        XtX = self.load("XtX")
-        XtY = self.load("XtY")
 
         # get the L/S estimates
         sigma_site = client.get_sigma_summary(B_hat, stand_mean)
@@ -226,7 +224,6 @@ class GetEstimatesState(AppState):
         if self.is_coordinator:
             return 'pooled_variance'
         return 'standardize_data'
-
 
 @app_state('pooled_variance')
 class PooledVarianceState(AppState):
@@ -270,6 +267,19 @@ class CalculateEstimatesState(AppState):
         # Get naive estimators
         client.get_naive_estimates()
 
+        if client.eb_param:
+            if client.parametric:
+                self.log("[calculate_estimates] Getting parametric Empirical Bayes estimates...")
+            else:
+                self.log("[calculate_estimates] Getting non-parametric Empirical Bayes estimates...")
+            client.get_eb_estimates()
+            self.log("[calculate_estimates] Empirical Bayes estimates have been computed.")
+        else:
+            client.get_non_eb_estimates()
+            self.log("[calculate_estimates] Non-Empirical Bayes estimates have been computed.")
+            
+            
+            
 
         return 'apply_correction'
 
