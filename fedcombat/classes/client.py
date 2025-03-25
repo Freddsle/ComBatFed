@@ -917,6 +917,7 @@ class Client:
                 delta_star_row = np.ones(s_data.shape[0])
             else:
                 indices = np.where(self.design[label] == 1)[0]
+                print("indices", indices)
                 temp = self.it_sol(
                     self.delta_hat[:, indices],
                               gamma_hat[i, :], delta_hat[i, :],
@@ -1022,6 +1023,8 @@ class Client:
         self.logger.info("indices shape: %s", len(indices))
                          
         bayesdata = (bayesdata * np.outer(np.sqrt(var_pooled), np.ones(len(indices)))) + stand_mean + mod_mean
+        # ensure that bayesdata has the same rownames as the original data
+        bayesdata.index = self.data.index
         self.logger.info("Data corrected, shape: %s", bayesdata.shape)
         
         return bayesdata

@@ -113,13 +113,13 @@ class ValidationState(AppState):
     def run(self):
         # obtain and safe common genes and indices of design matrix
         logging.info("[validate] waiting for common features and covariates")
-        global_feauture_names, cohorts_order = self.await_data(n=1, is_json=False, memo="common_features")
+        global_feature_names, cohorts_order = self.await_data(n=1, is_json=False, memo="common_features")
         global_variables = self.load("global_variables")
         client = self.load('client')
 
         client.validate_inputs(global_variables)
         logging.info("[validate] Inputs have been validated")
-        client.set_data(global_feauture_names)
+        client.set_data(global_feature_names)
         logging.info("[validate] Data has been set to contain all global features")
 
         # get all client names to generate design matrix
@@ -180,6 +180,8 @@ class ComputeBHatState(AppState):
         XtX_global, XtY_global, ref_size = c_utils.aggregate_XtX_XtY(XtX_XtY_lists, n=n, k=k, use_smpc=client.smpc)
         self.store(key="XtX_global", value=XtX_global)
         self.store(key="XtY_global", value=XtY_global)
+        self.log("[Compute_b_hat:] XtX_global and XtY_global have been aggregated.")
+        self.log(f"[Compute_b_hat:] Ref size: {ref_size}")
 
         # Compute B.hat = inv(ls1) @ ls2.
         B_hat = c_utils.compute_B_hat(XtX_global, XtY_global)
