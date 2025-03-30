@@ -653,6 +653,7 @@ class Client:
         Args:
             XtX: The aggregated XtX matrix of shape n x k x k.
             B_hat: The B_hat matrix of shape k x n.
+            ref_size: The reference size of the sigma summary matrix of shape n x n.
 
         Returns:
             The sigma summary matrix of shape n x n.
@@ -662,11 +663,11 @@ class Client:
         def row_vars(x):
             return np.nanvar(x, axis=1, ddof=1)
 
-        n_array = np.sum(ref_size)
+        # n_array = np.sum(ref_size)
+        n_array = self.data.shape[1] # number of samples
         factor = n_array / (n_array - 1)
         # Explicitly transpose correctly (B_hat shape: k x n_features)
         fitted = (self.design.values @ B_hat).T  # shape: (n_features, n_samples)
-        
         diff = self.data.values - fitted  # shape: (n_features, n_samples)
         var_unbiased = row_vars(diff)  # variance per feature (row)
         var_pooled = var_unbiased / factor

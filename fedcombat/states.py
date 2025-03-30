@@ -216,7 +216,7 @@ class GetEstimatesState(AppState):
         self.store(key="ref_size", value=ref_size)
 
         # get the L/S estimates
-        sigma_site = client.get_sigma_summary(B_hat, stand_mean)
+        sigma_site = client.get_sigma_summary(B_hat, ref_size)
         self.store(key="sigma_site", value=sigma_site)
         self.log(f"[get_estimates:] L/S estimates have been computed. Sigma site has been computed, shape: {sigma_site.shape}")
 
