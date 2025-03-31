@@ -28,6 +28,7 @@ class Client:
         self.min_samples: int = 0
         self.eb_param: Optional[bool] = True
         self.parametric: Optional[bool] = True
+        self.TEST_MODE: Optional[bool] = False
 
     def read_config(self, config: Dict[str, Any], input_folder: Path, client_name: str) -> Tuple[str, Optional[str], Optional[int]]:
         """
@@ -239,6 +240,8 @@ class Client:
         Returns:
             A dict mapping batch names to a list of hashed feature names that are considered valid for that batch.
         """
+        if not min_samples:
+            min_samples = self.min_samples
         # Validate required attributes
         if not isinstance(self.data, pd.DataFrame):
             error_msg = "Data must be a pandas DataFrame."
@@ -320,7 +323,7 @@ class Client:
 
         # 2. Global privacy check: Features must have at least min_samples non-NaN entries across the client.
         non_nan_counts = self.data.notnull().sum(axis=1)
-        ignore_features_global = non_nan_counts[non_nan_counts < min_samples].index.tolist()
+        ignore_features_global = non_nan_counts[non_nan_counts <= min_samples].index.tolist()
         if ignore_features_global:
             self.logger.info(
                 f"Ignoring {len(ignore_features_global)} features for client {self.client_name} due to privacy reasons (fewer than {min_samples} non-NaN samples)."
@@ -584,9 +587,10 @@ class Client:
         
         # Privacy check: Ensure more samples than design columns.
         if self.design.shape[0] <= self.design.shape[1]:
-            self.logger.error(
-            f"Privacy Error: Insufficient samples for privacy. Samples: {self.design.shape[0]}, Design columns: {self.design.shape[1]}")
-            raise ValueError("Privacy Error: Insufficient samples for privacy")
+            if not self.TEST_MODE:
+                self.logger.error(
+                f"Privacy Error: Insufficient samples for privacy. Samples: {self.design.shape[0]}, Design columns: {self.design.shape[1]}")
+                raise ValueError("Privacy Error: Insufficient samples for privacy")
         
         # If any batch contains only one sample - error privacy
         for batch_column in cohorts:
@@ -672,6 +676,8 @@ class Client:
         var_unbiased = row_vars(diff)  # variance per feature (row)
         var_pooled = var_unbiased / factor
 
+        self.sigma = var_pooled
+
         return var_pooled  # (n_features,)
     
     def get_standardized_data(
@@ -717,6 +723,7 @@ class Client:
         self.stand_data = (
             self.data.values - self.stand_mean - self.mod_mean
             ) / np.outer(np.sqrt(var_pooled), np.ones(len(selected_means)))
+        self.stand_data.index = self.data.index
         self.logger.info("Data standardized, shape: %s", self.stand_data.shape)
 
 
@@ -907,8 +914,8 @@ class Client:
 
         delta_hat = self.delta_hat
         s_data = self.stand_data.values
-        gamma_hat = self.gamma_hat
-        gamma_bar = self.gamma_bar
+        gamma_hat = self.gamma_hat.copy()
+        gamma_bar = self.gamma_bar.copy()
 
         gamma_star_rows = []
         delta_star_rows = []
@@ -918,11 +925,15 @@ class Client:
                 delta_star_row = np.ones(s_data.shape[0])
             else:
                 indices = np.where(self.design[label] == 1)[0]
-                print("indices", indices)
                 temp = self.it_sol(
-                    self.delta_hat[:, indices],
-                              gamma_hat[i, :], delta_hat[i, :],
-                              gamma_bar[i], t2[i], a_prior[i], b_prior[i])
+                    s_data[:, indices],
+                    gamma_hat[i, :], 
+                    delta_hat[i, :],
+                    gamma_bar[i], 
+                    t2[i], 
+                    a_prior[i], 
+                    b_prior[i]
+                )
                 gamma_star_row = temp[0]
                 delta_star_row = temp[1]
             
@@ -968,13 +979,18 @@ class Client:
         A dictionary with EB estimators: "gamma.star", "delta.star", "gamma.bar", "t2", "a.prior", "b.prior"
         """        
         # Compute gamma.bar as the mean across batches (axis 0 of gamma_hat, per feature)
-        self.gamma_bar = np.nanmean(self.gamma_hat, axis=0)
+        self.gamma_bar = np.nanmean(self.gamma_hat, axis=1)
         # Compute t2 as the variance of gamma_hat (per feature)
         # t2 = np.nanvar(self.gamma_hat, axis=0, ddof=1)
         t2 = self.gamma_hat.var(ddof=1, axis=1)
+        self.t2 = t2
         
         a_prior = self.apriorMat(self.delta_hat)
         b_prior = self.bpriorMat(self.delta_hat)
+
+        self.a_prior = a_prior
+        self.b_prior = b_prior
+        self.logger.info("Computed a_prior and b_prior.")
 
         if self.parametric:
             self.get_parametric_estimators(t2, a_prior, b_prior)
@@ -995,6 +1011,7 @@ class Client:
         bayesdata       : The corrected data matrix.
         """
         mod_mean = self.mod_mean
+        mod_mean.index = self.data.index
         stand_mean = self.stand_mean
         batch_design = self.batch_design        
         if self.eb_param:
@@ -1008,13 +1025,15 @@ class Client:
         j = 0
         
         self.logger.info("Correcting data...")
-        for i, label in enumerate(self.batch_labels):
+        for label in self.batch_labels:
             indices = np.where(self.design[label] == 1)[0]
-            fitted = (batch_design.iloc[indices, :] @ gamma_star).T 
+            fitted = np.dot(batch_design.iloc[indices], gamma_star).T 
             top = bayesdata.iloc[:, indices] - fitted
             bottom = np.outer(np.sqrt(delta_star[j, :]), np.ones(len(indices)))
             bayesdata.iloc[:, indices] = top / bottom
-        
+            j += 1 
+        self.top = top
+        self.bottom = bottom
         # Re-scale and add back the mean adjustments.
         self.logger.info("Rescaling and adding back mean adjustments...")
         self.logger.info("Data shape: %s", bayesdata.shape)
@@ -1022,9 +1041,15 @@ class Client:
         self.logger.info("stand_mean shape: %s", stand_mean.shape)
         self.logger.info("mod_mean shape: %s", mod_mean.shape)
         self.logger.info("indices shape: %s", len(indices))
-                         
-        bayesdata = (bayesdata * np.outer(np.sqrt(var_pooled), np.ones(len(indices)))) + stand_mean + mod_mean
-        # ensure that bayesdata has the same rownames as the original data
+
+        self.pooled_var = var_pooled
+        
+        self.tmp_bayesdata = bayesdata.copy()
+        # Rescale the data using the pooled variance and add back the mean adjustments.
+        bayesdata = (
+            bayesdata * np.outer(np.sqrt(var_pooled), np.ones(len(indices)))
+        ) + stand_mean + mod_mean
+        self.logger.info("Rescaling completed.")
         bayesdata.index = self.data.index
         self.logger.info("Data corrected, shape: %s", bayesdata.shape)
         

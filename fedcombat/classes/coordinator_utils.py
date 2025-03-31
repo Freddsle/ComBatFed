@@ -181,7 +181,6 @@ def compute_B_hat(
     logger.info("Computing B_hat")
     XtX_global_inv = np.zeros((XtX_global.shape[0], XtX_global.shape[1], XtX_global.shape[2]))
     B_hat = np.zeros((XtX_global.shape[1], XtX_global.shape[0]))
-    
     for i in range(XtX_global.shape[0]):
         try:
             XtX_global_inv[i, :, :] = np.linalg.inv(XtX_global[i, :, :])
@@ -189,7 +188,13 @@ def compute_B_hat(
             raise ValueError("The XtX_global matrix is singular and cannot be inverted.")
     
         B_hat[:, i] = XtX_global_inv[i, :, :] @ XtY_global[i, :]
-
+    # XtY_global = XtY_global
+    # try:
+    #     XtX_global_inv = np.linalg.inv(XtX_global[0])
+    # except np.linalg.LinAlgError:
+    #     raise ValueError("The XtX_global matrix is singular and cannot be inverted.")
+    
+    # B_hat = XtX_global_inv.T @ XtY_global.T
     logger.info("B_hat has been computed")
     return B_hat
 
@@ -244,7 +249,7 @@ def get_pooled_variance(
     # Compute the weighted average of variance estimates across sites.
     var_pooled = np.zeros_like(vars_list[0])
     for i in range(total_clients):
-        var_pooled += ref_size[i] * vars_list[i]
+        var_pooled += np.array(vars_list[i])
     var_pooled = var_pooled / total_samples
 
     return var_pooled
