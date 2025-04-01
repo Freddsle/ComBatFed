@@ -1,1 +1,28 @@
 .Rproj.user
+.pytest_cache
+utils/__pycache__
+
+*.pyc
+
+.Rhistory
+*.Rproj
+.RData
+
+
+# Addtional files
+datasets/Ovarian_Cancer_microarray/hursta2a520709cdf/*
+datasets/Ovarian_Cancer_microarray/preprocessing_info/*
+datasets/Ovarian_Cancer_microarray/archive/*
+Articles
+Notes
+
+# FC runs files
+datasets/logs/*
+datasets/tests/*
+datasets/workflows/*
+logs
+
+
+# tests files
+evaluation/d_combat/json/*.json
+evaluation/d_combat/intermediate

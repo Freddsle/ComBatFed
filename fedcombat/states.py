@@ -221,7 +221,7 @@ class GetEstimatesState(AppState):
         self.log(f"[get_estimates:] L/S estimates have been computed. Sigma site has been computed, shape: {sigma_site.shape}")
 
         # send the sigma_site to the coordinator
-        self.send_data_to_coordinator(sigma_site, send_to_self=True, use_smpc=False)
+        self.send_data_to_coordinator(sigma_site  * client.data.shape[1], send_to_self=True, use_smpc=client.smpc)
         self.log("[get_estimates:] Sigma site has been sent to the coordinator.")
         if self.is_coordinator:
             return 'pooled_variance'
@@ -234,10 +234,10 @@ class PooledVarianceState(AppState):
 
     def run(self):
         logging.info("[pooled variance] Getting pooled variance")
-        var_list = self.gather_data(is_json=False, use_smpc=False)
+        var_list = self.gather_data(is_json=False, use_smpc=self.load("smpc"))
 
         # get the pooled variance
-        pooled_variance = c_utils.get_pooled_variance(var_list, self.load("ref_size"))
+        pooled_variance = c_utils.get_pooled_variance(var_list, self.load("ref_size"), self.load("smpc"))
         self.store(key="pooled_variance", value=pooled_variance)
         self.log(f"[pooled variance:] Pooled variance has been computed, shape: {pooled_variance.shape}")
 

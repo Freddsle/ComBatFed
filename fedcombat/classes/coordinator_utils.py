@@ -232,7 +232,8 @@ def compute_mean(
 
 def get_pooled_variance(
     vars_list: List[float],
-    ref_size: np.ndarray
+    ref_size: np.ndarray,
+    use_SMPC: bool = False
 ) -> float:
     """
     Computes the pooled variance for the ComBat algorithm.
@@ -247,9 +248,12 @@ def get_pooled_variance(
     total_samples = np.sum(ref_size)
 
     # Compute the weighted average of variance estimates across sites.
-    var_pooled = np.zeros_like(vars_list[0])
-    for i in range(total_clients):
-        var_pooled += np.array(vars_list[i])
+    if use_SMPC:
+        var_pooled = vars_list[0]
+    else:
+        var_pooled = np.zeros_like(vars_list[0])
+        for i in range(total_clients):
+            var_pooled += np.array(vars_list[i])
     var_pooled = var_pooled / total_samples
 
     return var_pooled

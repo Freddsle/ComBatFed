@@ -242,7 +242,7 @@ class TestGetPooledVariance(unittest.TestCase):
         ref_size = np.array([10, 20])
 
         pooled_var = get_pooled_variance(vars_list, ref_size)
-        expected_pooled_var = (10 * vars_list[0] + 20 * vars_list[1]) / 30
+        expected_pooled_var = (vars_list[0] + vars_list[1]) / 30
 
         assert_array_almost_equal(pooled_var, expected_pooled_var)
 
@@ -251,7 +251,7 @@ class TestGetPooledVariance(unittest.TestCase):
         ref_size = np.array([15])
 
         pooled_var = get_pooled_variance(vars_list, ref_size)
-        expected_pooled_var = vars_list[0]
+        expected_pooled_var = vars_list[0] / 15
 
         assert_array_equal(pooled_var, expected_pooled_var)
 

@@ -54,11 +54,9 @@ pca_plot <- function(
       theme(legend.position = "none")
   }
 
-
   if (!is.null(cbPalette)) {
     pca_plot <- pca_plot + scale_color_manual(values = cbPalette)
   }
-
 
   if (path == "") {
     return(pca_plot)

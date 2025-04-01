@@ -323,7 +323,7 @@ class Client:
 
         # 2. Global privacy check: Features must have at least min_samples non-NaN entries across the client.
         non_nan_counts = self.data.notnull().sum(axis=1)
-        ignore_features_global = non_nan_counts[non_nan_counts <= min_samples].index.tolist()
+        ignore_features_global = non_nan_counts[non_nan_counts < min_samples].index.tolist()
         if ignore_features_global:
             self.logger.info(
                 f"Ignoring {len(ignore_features_global)} features for client {self.client_name} due to privacy reasons (fewer than {min_samples} non-NaN samples)."
