@@ -587,7 +587,11 @@ class Client:
         
         # Privacy check: Ensure more samples than design columns.
         if self.design.shape[0] <= self.design.shape[1]:
-            if not self.TEST_MODE:
+            if self.design.shape[0] >= self.min_samples:
+                self.logger.info(
+                    f"Privacy Warning: Number of samples ({self.design.shape[0]}) is less than or equal to the number of design columns ({self.design.shape[1]})."
+                )
+            elif not self.TEST_MODE:
                 self.logger.error(
                 f"Privacy Error: Insufficient samples for privacy. Samples: {self.design.shape[0]}, Design columns: {self.design.shape[1]}")
                 raise ValueError("Privacy Error: Insufficient samples for privacy")

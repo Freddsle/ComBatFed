@@ -1,0 +1,15 @@
+FedComBat:
+  # Required settings:
+  data_filename: "expr_for_correction.tsv"     # Data file relative to the input folder
+  data_separator: "\t"                           # CSV file delimiter
+
+  # Optional settings:
+  min_samples: 3                                # Minimum samples required per feature
+  covariates: ["Status"]                           # List of covariates to use
+  smpc: true                                    # Flag for secure multi-party computation
+  design_filename: "design.tsv"                 # Design file (optional; required if using batch info)
+  design_separator: "\t"                        # Delimiter for the design file
+  rows_as_features: true                       # Set to true if the data file is an expression file with features as rows
+  index_col: 0                                  # Column to use as index (0-based)
+  position: 0                                   # Client position (if applicable)
+  batch_col_name: "batch"                       # Column in the design file that contains batch information
