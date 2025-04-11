@@ -32,7 +32,7 @@ class InitialState(AppState):
         self.store(key="smpc", value=client.smpc)
         self.store(key='client', value=client)
         self.store(key="separator", value=client.data_separator)
-        self.configure_smpc(exponent=12)
+        self.configure_smpc(exponent=13)
 
         # exchange the batch_labels and covariates
         self.send_data_to_coordinator(
@@ -66,9 +66,8 @@ class InitialState(AppState):
         global_variables, num_batches = self.await_data(n=1, is_json=False, memo="commonVariables")
         self.store(key='global_variables', value=global_variables)
         # now we can calculate the min_samples_per_feature
-        min_samples = max(num_batches + len(global_variables) + 1, client.min_samples)
-
-        batch_feature_presence = client.get_batch_feature_presence_info(min_samples=min_samples)
+        # min_samples = max(num_batches + len(global_variables) + 1, client.min_samples)
+        batch_feature_presence = client.get_batch_feature_presence_info(min_samples=client.min_samples)
 
         self.send_data_to_coordinator((cohort_name,
                                        client.position,
