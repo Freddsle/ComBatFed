@@ -296,6 +296,11 @@ class ApplyCorrectionState(AppState):
         corrected_data = client.get_corrected_data(pooled_variance)
 
         logging.info("[apply_correction] Batch correction has been applied.")
+        if client.output_tabular:
+            logging.info("[apply_correction] Saving corrected data to file")
+            # transpose the data to have features in rows and samples in columns
+            corrected_data = corrected_data.transpose()
+            
         corrected_data.to_csv(
             os.path.join(os.getcwd(), "mnt", "output", "batch_corrected_data.csv"),
             sep=self.load("separator")

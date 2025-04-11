@@ -29,6 +29,7 @@ class Client:
         self.eb_param: Optional[bool] = True
         self.parametric: Optional[bool] = True
         self.TEST_MODE: Optional[bool] = False
+        self.output_tabular: Optional[bool] = False
 
     def read_config(self, config: Dict[str, Any], input_folder: Path, client_name: str) -> Tuple[str, Optional[str], Optional[int]]:
         """
@@ -89,6 +90,9 @@ class Client:
             if self.batch_col and design_file_path is None:
                 raise ValueError("Batch column was given but no design file was provided")
             
+        if "output_tabular" in config:
+            self.output_tabular = config["output_tabular"]
+
         # Get combatch parameters
         self.mean_only = config.get("mean_only", False)
         self.parametric = config.get("parametric", True)

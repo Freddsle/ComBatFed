@@ -5,6 +5,7 @@ library(patchwork)
 library(grid)
 library(umap)
 library(ggsci)
+library(cowplot)
 
 library(viridis)
 
@@ -281,4 +282,60 @@ plot_diagnostic <- function(expression, metadata, dataset,
 
 
     return(plot_res)
+}
+
+
+
+plotScatterWithTable <- function(corrected_expr, fed_expression,
+                                 title = "Scatter Plot with Table",
+                                  x_name = "Corrected Expression",
+                                  y_name = "FED Expression") { 
+
+  # Create a data frame with the two tool outputs
+  df <- data.frame(
+    corrected = as.numeric(unlist(corrected_expr)),
+    fed = as.numeric(unlist(fed_expression))
+  )
+  
+  # Compute the absolute differences between tool outputs
+  df$abs_diff <- abs(df$corrected - df$fed)
+  
+  # Calculate the maximum, minimum, and mean of the absolute differences
+  max_abs_diff <- max(df$abs_diff, na.rm = TRUE)
+  min_abs_diff <- min(df$abs_diff, na.rm = TRUE)
+  mean_abs_diff <- mean(df$abs_diff, na.rm = TRUE)
+  
+  # Format the values in scientific notation (or fixed for min if desired)
+  max_abs_diff_scientific <- sprintf("%.2e", max_abs_diff)
+  min_abs_diff_scientific <- sprintf("%.2f", min_abs_diff)
+  mean_abs_diff_scientific <- sprintf("%.2e", mean_abs_diff)
+  
+  # Create a summary table data frame with custom column headers
+  stat_table <- data.frame(
+    "Abs.differences" = c("minimum", "mean", "maximum"),
+    Value = c(min_abs_diff_scientific, mean_abs_diff_scientific, max_abs_diff_scientific)
+  )
+  
+  # Convert the summary table into a grob (graphical object)
+  table_grob <- tableGrob(stat_table, rows = NULL)
+  
+  # Generate the scatter plot with a 1:1 line
+  p <- ggplot(df, aes(x = fed, y = corrected)) +
+    geom_point(alpha = 0.2) +
+    geom_abline(intercept = 0, slope = 1, color = "red", linetype = "dashed") +
+    labs(
+      title = title,
+      x = x_name,
+      y = y_name,
+    ) +
+    theme_minimal()
+  
+  # Overlay the table on the scatter plot using cowplot
+  final_plot <- ggdraw() +
+    draw_plot(p) +
+    # Position the table in the top left corner:
+    draw_grob(table_grob, x = 0.2, y = 0.6, width = 0.35, height = 0.35)
+  
+  # Return the final overlaid plot
+  return(final_plot)
 }
