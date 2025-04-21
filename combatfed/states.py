@@ -301,10 +301,26 @@ class ApplyCorrectionState(AppState):
             # transpose the data to have features in rows and samples in columns
             corrected_data = corrected_data.transpose()
             
-        corrected_data.to_csv(
-            os.path.join(os.getcwd(), "mnt", "output", "batch_corrected_data.csv"),
-            sep=self.load("separator")
-    )
+        if client.output_path:
+            file_path = os.path.join(os.getcwd(), "mnt", "output", client.output_path)
+            # save the corrected data to the output path
+            # check if dir exist - if not - create it
+            if not os.path.exists(file_path):
+                os.makedirs(file_path)
+            # save the corrected data to the output path
+            corrected_data.to_csv(
+                os.path.join(file_path, "batch_corrected_data.csv"),
+                sep=self.load("separator")
+            )
+            logging.info(f"[apply_correction] Corrected data has been saved to {os.path.join(file_path, 'batch_corrected_data.csv')}")
+        else:
+            corrected_data.to_csv(
+                os.path.join(os.getcwd(), "mnt", "output", "batch_corrected_data.csv"),
+                sep=self.load("separator")
+            )
+            logging.info(f"[apply_correction] Corrected data has been saved to {os.path.join(os.getcwd(), 'mnt', 'output', 'batch_corrected_data.csv')}")
+       
+        
         # with open(os.path.join(os.getcwd(), "mnt", "output", "report.txt"), "w") as f:
         #     f.write(client.report)
         return 'terminal'

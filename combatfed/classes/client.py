@@ -30,6 +30,7 @@ class Client:
         self.parametric: Optional[bool] = True
         self.TEST_MODE: Optional[bool] = False
         self.output_tabular: Optional[bool] = False
+        self.output_path: Optional[str] = None
 
     def read_config(self, config: Dict[str, Any], input_folder: Path, client_name: str) -> Tuple[str, Optional[str], Optional[int]]:
         """
@@ -92,6 +93,8 @@ class Client:
             
         if "output_tabular" in config:
             self.output_tabular = config["output_tabular"]
+        if "output_path" in config:
+            self.output_path = config["output_path"]
 
         # Get combatch parameters
         self.mean_only = config.get("mean_only", False)
@@ -208,6 +211,7 @@ class Client:
         for filename in config_files:
             try:
                 config = bios.read(f"{input_folder}/{filename}")
+                self.config_filename = filename
                 break
             except FileNotFoundError as e:
                 last_exception = e
