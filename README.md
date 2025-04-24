@@ -10,14 +10,18 @@
 ## Table of Contents  <!-- omit in toc -->
 
 - [Architecture overview](#architecture-overview)
+- [Glossary & further resources](#glossary--further-resources)
 - [Installation](#installation)
   - [Prerequisites](#prerequisites)
   - [Clone the repository](#clone-the-repository)
 - [Usage](#usage)
-  - [Glossary & further resources](#glossary--further-resources)
   - [Input and Output](#input-and-output)
-- [Run FedComBat](#run-fedcombat)
-- [Setting Up the Environment](#setting-up-the-environment)
+  - [Configuration](#configuration)
+  - [Quick start](#quick-start)
+- [Contact information](#contact-information)
+- [Troubleshooting](#troubleshooting)
+- [License](#license)
+- [How to cite](#how-to-cite)
 
 ---
 
@@ -44,6 +48,21 @@ The repository contains the following components:
 For detailed usage instructions and implementation information, refer to the [How To Guide](https://freddsle.github.io/ComBatFed/docs/how_to_guide.html) and the [README](https://freddsle.github.io/ComBatFed/batchcorrection/).
 
 ---
+
+
+## Glossary & further resources
+
+- **FeatureCloud**: A platform enabling federated analyses. [FeatureCloud docs](https://featurecloud.ai/)
+- **ComBat**: A method for batch effect correction from the `sva` R package (https://bioconductor.org/packages/release/bioc/html/sva.html).
+- **Federated Learning**: A machine learning approach that allows multiple parties to collaboratively train models without sharing raw data.
+- **Coordinator**: The entity that initiates the federated learning process and coordinates the participants. Usually, one of the participants.
+- **Participant/Client**: The entities that hold the data and participate in the federated learning process.
+
+For more advanced configurations and detailed explanations, see the 
+[configuration](https://freddsle.github.io/ComBatFed/combatfed/) .
+
+---
+
 ## Installation
 
 ### Prerequisites
@@ -69,19 +88,6 @@ This will clone the repository to your local machine with example files and simu
 ---
 
 ## Usage
-
-### Glossary & further resources
-
-- **FeatureCloud**: A platform enabling federated analyses. [FeatureCloud docs](https://featurecloud.ai/)
-- **ComBat**: A method for batch effect correction from the `sva` R package (https://bioconductor.org/packages/release/bioc/html/sva.html).
-- **Federated Learning**: A machine learning approach that allows multiple parties to collaboratively train models without sharing raw data.
-- **Coordinator**: The entity that initiates the federated learning process and coordinates the participants. Usually, one of the participants.
-- **Participant/Client**: The entities that hold the data and participate in the federated learning process.
-
-For more advanced configurations and detailed explanations, see the 
-[configuration](https://freddsle.github.io/ComBatFed/combatfed/) .
-
----
 
 ### Input and Output
 
