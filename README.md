@@ -1,90 +1,174 @@
 
-# Run FedComBat
+# Federated batch effects correction with ComBat (ComBatFed) <!-- omit in toc -->
 
-## Prerequisite
-To run FedComBat, you should install Docker and FeatureCloud pip package:
+[![License](https://img.shields.io/github/license/Freddsle/ComBatFed)](https://github.com/Freddsle/ComBatFed/blob/main/LICENSE)
+[![Coverage Status](https://coveralls.io/repos/github/Freddsle/ComBatFed/badge.svg?branch=main)](https://coveralls.io/github/Freddsle/ComBatFed?branch=main)
+[![Docs](https://readthedocs.org/projects/combatfed/badge/?version=latest)](https://combatfed.readthedocs.io/en/latest/)
+
+---
+
+## Table of Contents  <!-- omit in toc -->
+
+- [Architecture overview](#architecture-overview)
+- [Installation](#installation)
+  - [Prerequisites](#prerequisites)
+  - [Clone the repository](#clone-the-repository)
+- [Usage](#usage)
+  - [Glossary & further resources](#glossary--further-resources)
+  - [Input and Output](#input-and-output)
+- [Run FedComBat](#run-fedcombat)
+- [Setting Up the Environment](#setting-up-the-environment)
+
+---
+
+## Architecture overview
+
+
+The **ComBatFed** is a federated implementation of the 'ComBat' method from the 'sva' R package, developed within the [FeatureCloud](https://featurecloud.ai/) platform. It enables privacy-preserving batch effect correction by keeping raw data decentralized and utilizing Secure Multiparty Computation (SMPC) for secure data aggregation.
+
+ComBatFed allows multiple participants to collaboratively remove batch effects from their data without sharing raw data, ensuring privacy.  
+You can access and use the `ComBatFed` app directly on [FeatureCloud](https://featurecloud.ai/app/combatfed). 
+
+
+The repository contains the following components:
+- **ComBatFed Implementation**: Located in the `combatfed` subfolder, providing the federated batch effect removal tool.
+- **Evaluation**: Contains code and scripts to reproduce the analyses.
+
+
+<p align="center">
+   <img src="./docs/Fig1.png" alt="ComBatFed workflow" width="80%">
+   <br>
+   <em>ComBatFed workflow </em>
+</p>
+
+For detailed usage instructions and implementation information, refer to the [How To Guide](https://freddsle.github.io/ComBatFed/docs/how_to_guide.html) and the [README](https://freddsle.github.io/ComBatFed/batchcorrection/).
+
+---
+## Installation
+
+### Prerequisites
+
+Before installing `ComBatFed`, ensure you have the following installed:
+1. **Docker**: [Installation Instructions](https://www.docker.com/get-started)
+2. **FeatureCloud CLI**.
+   For Windows users, git must also be installed and added to PATH. We recommend
+   and tested using [WSL](https://docs.docker.com/desktop/features/wsl/).
+3. **App Image** (either build locally or pull).
+
+### Clone the repository
+
+If you want to run the simulations locally, clone the repository:
 
 ```bash
-pip install featurecloud
+git clone https://github.com/Freddsle/ComBatFed.git
+cd ComBatFed
 ```
 
-Then either download FedComBat image from the FeatureCloud docker repository:
+This will clone the repository to your local machine with example files and simulation scripts.
 
-```bash
-featurecloud app download featurecloud.ai/fedcombat
-```
-Or build the app locally:
+---
 
-```bash
-featurecloud app build featurecloud.ai/fedcombat
-```
+## Usage
 
+### Glossary & further resources
 
-# Run FedComBat in the test-bed
+- **FeatureCloud**: A platform enabling federated analyses. [FeatureCloud docs](https://featurecloud.ai/)
+- **ComBat**: A method for batch effect correction from the `sva` R package (https://bioconductor.org/packages/release/bioc/html/sva.html).
+- **Federated Learning**: A machine learning approach that allows multiple parties to collaboratively train models without sharing raw data.
+- **Coordinator**: The entity that initiates the federated learning process and coordinates the participants. Usually, one of the participants.
+- **Participant/Client**: The entities that hold the data and participate in the federated learning process.
 
-You can run FedComBat as a standalone app in the FeatureCloud test-bed or FeatureCloud Workflow. You can also run the app using CLI:
+For more advanced configurations and detailed explanations, see the 
+[configuration](https://freddsle.github.io/ComBatFed/combatfed/) .
 
-```bash
-featurecloud controller start --data-dir=./datasets
+---
 
+### Input and Output
 
-featurecloud test start --app-image featurecloud.ai/FedComBat --client-dirs './sample/c1,./sample/c2' --generic-dir './sample/generic'
+For files preparation, format, config file, and output details, refer to the [How To Guide](https://freddsle.github.io/ComBatFed/docs/how_to_guide.html#file-preparation).
 
-featurecloud test start --app-image FedComBat --client-dirs 'datasets' --generic-dir './sample/generic'
-```
+In summary, you need two main inputs and one optional file:
 
+<p align="center">
+   <img src="./docs/fig_S1.jpg" alt="Required files figure" width="70%">
+   <br>
+   <em>Input files required for ComBatFed.</em>
+</p>
 
-## Setting Up the Environment
-
-To recreate the environment, run:
-
-```bash
-mamba env create -f environment.yml
-```
-
-To activate the environment, run:
-
-```bash
-mamba activate FedComBat
-```
+Output files include:
+- **Corrected Data**: The batch-corrected data, provided in the same format as the input file or as specified in the configuration file.
+- **Log File**: A detailed log of the processing steps and any warnings or errors encountered.
 
 
-# Configuration File for FedComBat
-The configuration file must be written in YAML and placed in the input folder (default: mnt/input). The file should be named either config.yml or config.yaml unless a custom filename is specified when initializing the client.
+### Configuration
 
-The configuration settings must be nested under the top-level key FedComBat.
+`ComBatFed` is highly configurable via the `config.yml` file. This file controls data formats, normalization methods, and other essential parameters.
 
 Example Config File (config.yml):
 
 ```yaml
-FedComBat:
-  data_filename: "data_matrix.tsv"              # Main data file: either features x samples or samples x features.
-  design_filename: "design.tsv"           # Optional design matrix: samples x covariates.
-                                                    # Must have first column as sample indices.
-                                                    # It is read in the following way:
-                                                    # pd.read_csv(design_file_path, sep=design_separator, index_col=0)
-  data_separator: "\t"                          # Delimiter for the data file.
-  design_separator: "\t"                        # Delimiter for the design file.
-  min_samples: 5                                # Minimum non-NaN samples required per feature.
-  covariates: ["age", "gender", "treatment"]    # List of covariates to be used.
-  smpc: true                                    # Secure multi-party computation flag.
-  rows_as_features: false                       # Set to true if the data file is an expression file.
-  index_col: 0                                  # Column index to use as the data index (0-based).
-  position: 1                                   # Client position (if applicable).
-  batch_col_name: "batch"                       # Column in design file that contains batch information.
-  reference_batch: "Batch_A"                        # Optional. Reference batch for processing, if multiple     
-                                                    # batches are present.
-  mean_only: false                              # Set to true to perform ComBat without the empirical Bayes step. Default is false.
-  parametric: true                              # Set to true to use parametric ComBat. Default is true.
-  empirical_bayes: true                         # Set to true to use empirical Bayes step for ComBat. Default is true.
+ComBatFed:
+  # Required settings:
+  data_filename: "expr_for_correction.tsv"      # Data file relative to the input folder
+  data_separator: "\t"                          # CSV file delimiter
+
+  # Optional settings:
+  min_samples: 3                                
+  covariates: ["Status"]                       
+  smpc: true                                    
+  design_filename: "design.tsv"                 
+  design_separator: "\t"                        
+  rows_as_features: false                       
+  index_col: 0                                 
+  position: 1                                   
+  batch_col_name: "batch"                       
+  output_tabular: true                         
+
 ```
+_For a comprehensive list of configuration options, refer to the [Configuration Section](https://freddsle.github.io/ComBatFed/combatfed) in the combatfed README._
 
+-
 
-# Input Data
+### Quick start
 
-The input data must be placed in the input folder. The data file filename must be specified in the configuration file.  
-The data file should be either features x samples or samples x features.  
-The design file is optional and its filename should be specified in the configuration file. The design file should be with samples x covariates. The first column should contain the sample names, that match the sample names in the data file.
+1. For a step-by-step detailed instructions on how to start collaboration using multiple machines, refer to the [How To Guide](https://freddsle.github.io/ComBatFed/docs/how_to_guide.html)
+2. For a step-by-step instructions on how to simulate collaboration via test environment, refer to the [Local Test Guide](https://freddsle.github.io/ComBatFed/docs/local_test.html)
 
-No missing values are allowed in the data file. If missing values are present, the rows with them should be removed before running the app.  
-Rows, where all values are zero, will be removed from the data file before running the app.
+---
+
+## Contact information
+
+For questions, issues, or support, please open an issue on the [GitHub repository](https://github.com/Freddsle/ComBatFed).
+
+---
+
+## Troubleshooting
+
+Encountering issues? Here are some common problems and their solutions:
+
+- **Missing Files**: Ensure `config.yml` and data files are in the correct directory.
+- **Incorrect Format**: Verify `rows_as_features` and `index_col` settings in `config.yml`.
+- **No Output Produced**: Check logs for error messages.
+- **Errors with Test runs**: Ensure the is no leftover running Docker containers. Restart Docker / System if necessary. 
+
+---
+
+## License
+
+This project is licensed under the [Apache License 2.0](LICENSE).
+
+---
+
+## How to cite
+
+If you use this code in your research, please cite the repository
+```bibtex
+@misc{ComBatFed,
+  author = {Yuliya Burankova},
+  title = {ComBatFed: Federated batch effects correction with ComBat},
+  year = {2025},
+  publisher = {GitHub},
+  journal = {GitHub repository},
+  url = {https://github.com/Freddsle/ComBatFed}
+}
+```

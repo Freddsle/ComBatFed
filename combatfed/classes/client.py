@@ -219,9 +219,9 @@ class Client:
             raise RuntimeError(f"Could not read the config file. Last error: {last_exception}")
         self.logger.info("Got the following config:\n%s", config)
         
-        if "FedComBat" not in config:
-            raise RuntimeError("Incorrect format of your config file, the key 'FedComBat' must be in your config file")
-        config = config["FedComBat"]
+        if "ComBatFed" not in config:
+            raise RuntimeError("Incorrect format of your config file, the key 'ComBatFed' must be in your config file")
+        config = config["ComBatFed"]
         self.client_name = client_name
         datafile_path, design_file_path, index_col = self.read_config(config, input_folder_path, client_name)
         
