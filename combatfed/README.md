@@ -3,6 +3,7 @@
 
 [![License](https://img.shields.io/github/license/Freddsle/ComBatFed)](https://github.com/Freddsle/ComBatFed/blob/main/LICENSE)
 [![Coverage Status](https://coveralls.io/repos/github/Freddsle/ComBatFed/badge.svg?branch=main)](https://coveralls.io/github/Freddsle/ComBatFed?branch=main)
+
 ---
 
 ## Table of Contents  <!-- omit in toc -->
@@ -29,7 +30,9 @@ The **ComBatFed** is a federated implementation of the 'ComBat' method from the 
 ComBatFed allows multiple participants to collaboratively remove batch effects from their data without sharing raw data, ensuring privacy.  
 You can access and use the `ComBatFed` app directly on [FeatureCloud](https://featurecloud.ai/app/combatfed). 
 
- 
+
+---
+
 ## Installation
  
 ### Prerequisites
@@ -60,7 +63,7 @@ You can access and use the `ComBatFed` app directly on [FeatureCloud](https://fe
      ```bash
      docker pull featurecloud.ai/combatfed:latest
      ```
-     
+
    - Alternatively, If you are using a ARM architecture (e.g., Mac M-series), you may need to build the image locally as shown below._
      ```bash
      docker build . -t featurecloud.ai/combatfed:latest
