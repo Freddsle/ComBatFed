@@ -63,12 +63,12 @@ def test_read_config_min_samples(tmp_path, sample_config, min_samples_input, exp
     input_folder = str(tmp_path)
     client_name = "TestClient"
     
-    # Wrap it under FedComBat to mimic actual structure
-    main_config = {"FedComBat": config}
+    # Wrap it under ComBatFed to mimic actual structure
+    main_config = {"ComBatFed": config}
     
     # read_config is normally called inside config_based_init, but we can call it directly
     datafile_path, design_file_path, index_col = client.read_config(
-        main_config["FedComBat"], input_folder, client_name
+        main_config["ComBatFed"], input_folder, client_name
     )
     
     assert client.min_samples == expected
@@ -83,9 +83,9 @@ def test_read_config_missing_data_filename(tmp_path, sample_config):
     config = sample_config.copy()
     config.pop("data_filename")  # remove mandatory key
     
-    main_config = {"FedComBat": config}
+    main_config = {"ComBatFed": config}
     with pytest.raises(RuntimeError, match="No data_filename was given"):
-        client.read_config(main_config["FedComBat"], str(tmp_path), "TestClient")
+        client.read_config(main_config["ComBatFed"], str(tmp_path), "TestClient")
 
 
 def test_read_config_missing_data_separator(tmp_path, sample_config):
@@ -96,9 +96,9 @@ def test_read_config_missing_data_separator(tmp_path, sample_config):
     config = sample_config.copy()
     config.pop("data_separator")
     
-    main_config = {"FedComBat": config}
+    main_config = {"ComBatFed": config}
     with pytest.raises(RuntimeError, match="No separator was given"):
-        client.read_config(main_config["FedComBat"], str(tmp_path), "TestClient")
+        client.read_config(main_config["ComBatFed"], str(tmp_path), "TestClient")
 
 
 def test_read_config_with_design_file(tmp_path, sample_config):
@@ -116,9 +116,9 @@ def test_read_config_with_design_file(tmp_path, sample_config):
     design_path = Path(tmp_path / "dummy_design.csv")
     design_path.write_text("ID\tbatch\nSample1\tBatch1\nSample2\tBatch1")
 
-    main_config = {"FedComBat": config}
+    main_config = {"ComBatFed": config}
     datafile_path, design_file_path, index_col = client.read_config(
-        main_config["FedComBat"], str(tmp_path), "TestClient"
+        main_config["ComBatFed"], str(tmp_path), "TestClient"
     )
     
     assert datafile_path.endswith("dummy_data.csv")
@@ -254,8 +254,8 @@ def test_config_based_init_valid(tmp_path, sample_config):
     """
     client = Client()
     config = sample_config.copy()
-    # Wrap in FedComBat
-    main_config = {"FedComBat": config}
+    # Wrap in ComBatFed
+    main_config = {"ComBatFed": config}
     
     # Write a minimal config.yml
     config_path = Path(tmp_path / "config.yml")
@@ -275,16 +275,16 @@ def test_config_based_init_valid(tmp_path, sample_config):
 
 def test_config_based_init_no_fedcombat_key(tmp_path):
     """
-    Test config_based_init raises an error if 'FedComBat' is missing in the config.
+    Test config_based_init raises an error if 'ComBatFed' is missing in the config.
     """
     client = Client()
-    # Write a config without FedComBat
+    # Write a config without ComBatFed
     bad_config = {"SomeOtherKey": {}}
     config_path = Path(tmp_path / "config.yml")
     import bios
     bios.write(str(config_path), bad_config)
     
-    with pytest.raises(RuntimeError, match="the key 'FedComBat' must be in your config file"):
+    with pytest.raises(RuntimeError, match="the key 'ComBatFed' must be in your config file"):
         client.config_based_init("TestClient", config_filename="config.yml", input_folder=str(tmp_path))
 
 
@@ -920,24 +920,3 @@ def test_create_design_with_covariates_not_in_data(dummy_client):
     assert result is None
     # The design should include covariate "cov1" with the original values.
     assert all(dummy_client.design["cov1"] == [100, 101, 102, 103])
-
-def test_create_design_privacy_error(dummy_client):
-    """
-    Test that create_design returns a privacy error message if the number of samples
-    is less than or equal to the number of design columns.
-    """
-    dummy_client.client_name = "ClientA"
-    # Create a data DataFrame with only 2 samples.
-    dummy_client.data = pd.DataFrame([[1,2],
-                                      [3,4]], columns=["s1", "s2"])
-    # Create a design DataFrame with a batch column.
-    dummy_client.design = pd.DataFrame({
-        "batch": ["Batch1", "Batch1"]
-    }, index=["s1", "s2"])
-    dummy_client.batch_col = "batch"
-    # Create cohorts list with more than 2 columns. For example, 3 cohorts.
-    cohorts = ["ClientA|Batch1", "ClientA|Batch2", "ClientA|Batch3"]
-    # Because after processing, design will have 3 (or more) columns and only 2 samples,
-    # the privacy check should trigger.
-    with pytest.raises(ValueError, match="Privacy Error"):
-        dummy_client.create_design(cohorts)

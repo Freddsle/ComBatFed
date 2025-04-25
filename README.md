@@ -45,7 +45,7 @@ The repository contains the following components:
    <em>ComBatFed workflow </em>
 </p>
 
-For detailed usage instructions and implementation information, refer to the [How To Guide](https://freddsle.github.io/ComBatFed/docs/how_to_guide.html) and the [README](https://freddsle.github.io/ComBatFed/batchcorrection/).
+For detailed usage instructions and implementation information, refer to the [README How To Guide](https://freddsle.github.io/ComBatFed/batchcorrection/).
 
 ---
 

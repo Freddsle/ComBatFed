@@ -26,3 +26,7 @@ logs
 # tests files
 evaluation/d_combat/json/*.json
 evaluation/d_combat/intermediate
+
+
+.coveralls.yml
+.coverage
