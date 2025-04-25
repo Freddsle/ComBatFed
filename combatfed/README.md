@@ -39,7 +39,6 @@ You can access and use the `ComBatFed` app directly on [FeatureCloud](https://fe
  Before installing `ComBatFed`, ensure you have the following installed:
  1. **Docker**: [Installation Instructions](https://www.docker.com/get-started).
  2. **FeatureCloud CLI**.
-
     - Install FeatureCloud CLI using pip:
       ```bash
       pip install featurecloud
@@ -52,7 +51,6 @@ You can access and use the `ComBatFed` app directly on [FeatureCloud](https://fe
     and tested using [WSL](https://docs.docker.com/desktop/features/wsl/).
 
  3. **App Image**:
-  
    - For linux/amd64:
      ```bash
      # pull the pre-built image
@@ -62,8 +60,7 @@ You can access and use the `ComBatFed` app directly on [FeatureCloud](https://fe
      ```bash
      docker pull featurecloud.ai/combatfed:latest
      ```
-
-   - Alternatively, If you are using a ARM architecture (e.g., Mac M-series), you may need to build the image locally as shown below._
+   - Alternatively, If you are using a ARM architecture (e.g., Mac M-series), you may need to build the image locally as shown below.  
      ```bash
      docker build . -t featurecloud.ai/combatfed:latest
      ```
@@ -75,7 +72,7 @@ You can access and use the `ComBatFed` app directly on [FeatureCloud](https://fe
       docker build . -t featurecloud.ai/combatfed:latest
       ```
 
-The app image which is provided in the docker registry of featurecloud built on the linux/amd64 platform. Especially if you're using a Macbook with any of the M-series chips or any other device not compatible with linux/amd64, please build the image locally.
+ The app image which is provided in the docker registry of featurecloud built on the linux/amd64 platform. Especially if you're using a Macbook with any of the M-series chips or any other device not compatible with linux/amd64, please build the image locally.
 
 ---
  
