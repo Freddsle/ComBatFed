@@ -79,7 +79,7 @@ The app image which is provided in the docker registry of featurecloud built on 
 
 ---
  
- ### Clone the repository
+### Clone the repository
  
  If you want to run the simulations locally, clone the repository:
  
@@ -92,8 +92,8 @@ The app image which is provided in the docker registry of featurecloud built on 
  
 ---
  
- ## File Structure
- ### Input 
+## File Structure
+### Input 
 
  In summary, you need two main inputs and one optional file:
  
@@ -117,7 +117,7 @@ client_folder/
 ├─ design.csv
 ```
  
- ### Configuration
+### Configuration
  
  `ComBatFed` is highly configurable via the `config.yml` file. This file controls data formats, normalization methods, and other essential parameters.
  
@@ -145,7 +145,9 @@ client_folder/
 
  ```
 
- ## Usage
+---
+
+## Usage
 
  To run the ComBatFed app, you can use the FeatureCloud CLI or the FeatureCloud web interface. 
  
@@ -160,7 +162,7 @@ client_folder/
 
  For any scenario, make sure that [Pre-requisites](#prerequisites) are met and that the input files are correctly formatted and placed in the input folder/
 
- ### Quick start - Test Mode
+### Quick start - Test Mode
 
  **No registration on FeatureCloud is needed.**
 
@@ -212,9 +214,8 @@ client_folder/
     - You can monitor the progress of the experiment in the FeatureCloud web interface. The app will run on each client, and you can view logs and results as they are generated.
     - The app will run for a few minutes, depending on the size of the data and the number of clients. You can check the logs for any errors or warnings.
     
- ---
  
- ### Output
+### Output
 
  Once the app has finished running, you will see a summary of the results in the web interface.
     <p align="center">
@@ -230,7 +231,7 @@ client_folder/
 Alternatively, you can check the logs in the terminal where you started the FeatureCloud controller (logs folder), and find the results in the test folder there.
 
 
- ## Quick start - Collaboration Mode
+## Quick start - Collaboration Mode
  
  **Registration on FeatureCloud is needed.**
 
@@ -273,7 +274,7 @@ For an actual multi-party setting:
    - After all clients join, the coordinator starts the project.
    - The app runs locally at each client, securely combining results.
    
-### Results and output:
+### Results and output
 
 After completion, each client finds:
    - The batch-corrected expression data.
@@ -290,13 +291,13 @@ The app has the following states:
         <em>ComBatFed app states.</em>
     </p>
 
- ## Contact information
+## Contact information
  
  For questions, issues, or support, please open an issue on the [GitHub repository](https://github.com/Freddsle/ComBatFed).
  
  ---
  
- ## Troubleshooting
+## Troubleshooting
  
  Encountering issues? Here are some common problems and their solutions:
  
@@ -307,13 +308,13 @@ The app has the following states:
  
  ---
  
- ## License
+## License
  
  This project is licensed under the [Apache License 2.0](LICENSE).
  
  ---
  
- ## How to cite
+## How to cite
  
  If you use this code in your research, please cite the repository
  ```bibtex
