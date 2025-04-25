@@ -101,7 +101,7 @@ You can access and use the `ComBatFed` app directly on [FeatureCloud](https://fe
  In summary, you need two main inputs and one optional file:
 
 <p align="center">
-   <img src="https://github.com/Freddsle/fedRBE/blob/main/docs/fig_S1.jpg?raw=true" alt="Required files figure" width="90%">
+   <img src="https://github.com/Freddsle/ComBatFed/blob/main/docs/fig_S1.jpg?raw=true" alt="Required files figure" width="90%">
    <br>
    <em>Input files required for ComBatFed.</em>
 </p>
@@ -188,15 +188,16 @@ For any scenario, make sure that [Pre-requisites](#prerequisites) are met and th
 
    This command starts the FeatureCloud controller and sets the data directory to the specified path. The `--data-dir` option specifies the directory where the input files are located. The `--data-dir` should point to the folder containing the input files, including `config.yml`, data files, and design files.
 
- If the controller is running, you will see the yellow / green icon on the FeatureCloud web interface:
+If the controller is running, you will see the yellow / green icon on the FeatureCloud web interface:
 
 <p align="center">
-   <img src="../docs/controller.png" alt="Controller" width="50%">
+   <img src="https://github.com/Freddsle/ComBatFed/blob/main/docs/controller.png?raw=true" alt="Controller." width="50%">
    <br>
-   <em>Running controller interface.</em>
+   <em>GUI for the running controller.</em>
 </p>
 
- If the controller is not running, you will see a red icon. 
+
+If the controller is not running, you will see a red icon. 
 
 
 3. **Run a Sample Experiment**:
@@ -209,11 +210,11 @@ For any scenario, make sure that [Pre-requisites](#prerequisites) are met and th
    - Select 5 clients, add lab_A, lab_B, lab_C, lab_D, lab_E respectively for the 5 clients to their path. 
    - Click "Start" to run the app.
 
-<p align="center">
-   <img src="../docs/start_test1.png" alt="Test GUI" width="50%">
-   <br>
-   <em>Example test.</em>
-</p>
+   <p align="center">
+      <img src="https://github.com/Freddsle/ComBatFed/blob/main/docs/start_test1.png?raw=true" alt="Test GUI." width="50%">
+      <br>
+      <em>Example test.</em>
+   </p>
 
 4. **Monitor the Experiment**:
     - You can monitor the progress of the experiment in the FeatureCloud web interface. The app will run on each client, and you can view logs and results as they are generated.
@@ -225,7 +226,7 @@ For any scenario, make sure that [Pre-requisites](#prerequisites) are met and th
  Once the app has finished running, you will see a summary of the results in the web interface.
 
 <p align="center">
-   <img src="https://github.com/Freddsle/fedRBE/blob/main/docs/test_running.png?raw=true" alt="Test GUI" width="60%">
+   <img src="https://github.com/Freddsle/ComBatFed/blob/main/docs/test_running.png?raw=true" alt="Test GUI" width="60%">
    <br>
    <em>Where to find results and logs.</em>
 </p>
@@ -261,7 +262,7 @@ For an actual multi-party setting:
    - The coordinator **creates tokens** and sends them to Clients A, B, and C.
 
    <p align="center">
-      <img src="https://github.com/Freddsle/fedRBE/blob/main/docs/how_to1.png?raw=true" alt="Coordinator steps." width="70%">
+      <img src="https://github.com/Freddsle/ComBatFed/blob/main/docs/how_to1.png?raw=true" alt="Coordinator steps." width="70%">
       <br>
       <em>Coordinator steps.</em>
    </p>
@@ -276,7 +277,7 @@ For an actual multi-party setting:
    - After joining, each client uploads their data and config file to the FeatureCloud GUI client. The data will not be sent to the coordinator or other clients, but makes it available for the local Docker container with the app.
 
    <p align="center">
-      <img src="https://github.com/Freddsle/fedRBE/blob/main/docs/how_to2.png?raw=true" alt="Client steps." width="70%">
+      <img src="https://github.com/Freddsle/ComBatFed/blob/main/docs/how_to2.png?raw=true" alt="Client steps." width="70%">
       <br>
       <em>Client steps.</em>
    </p>
@@ -297,7 +298,7 @@ After completion, each client finds:
 The app has the following states:
 
 <p align="center">
-   <img src="https://github.com/Freddsle/fedRBE/blob/main/combatfed/myplot.png?raw=true" alt="ComBatFed app states." width="50%">
+   <img src="https://github.com/Freddsle/ComBatFed/blob/main/combatfed/myplot.png?raw=true" alt="ComBatFed app states." width="50%">
    <br>
    <em>ComBatFed app states.</em>
 </p>
