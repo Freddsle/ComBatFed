@@ -3,7 +3,6 @@
 
 [![License](https://img.shields.io/github/license/Freddsle/ComBatFed)](https://github.com/Freddsle/ComBatFed/blob/main/LICENSE)
 [![Coverage Status](https://coveralls.io/repos/github/Freddsle/ComBatFed/badge.svg?branch=main)](https://coveralls.io/github/Freddsle/ComBatFed?branch=main)
-[![Docs](https://readthedocs.org/projects/combatfed/badge/?version=latest)](https://combatfed.readthedocs.io/en/latest/)
 
 ---
 
@@ -45,21 +44,21 @@ The repository contains the following components:
    <em>ComBatFed workflow </em>
 </p>
 
-For detailed usage instructions and implementation information, refer to the [README How To Guide](https://freddsle.github.io/ComBatFed/batchcorrection/).
+For detailed usage instructions and implementation information, refer to the [README How To Guide](https://freddsle.github.io/ComBatFed/combatfed/).
 
 ---
 
 
 ## Glossary & further resources
 
-- **FeatureCloud**: A platform enabling federated analyses. [FeatureCloud docs](https://featurecloud.ai/)
-- **ComBat**: A method for batch effect correction from the `sva` R package (https://bioconductor.org/packages/release/bioc/html/sva.html).
+- **FeatureCloud**: A platform enabling federated analyses. [FeatureCloud docs](https://featurecloud.ai/).
+- **ComBat**: A method for batch effect correction from the [`sva` R package](https://bioconductor.org/packages/release/bioc/html/sva.html).
 - **Federated Learning**: A machine learning approach that allows multiple parties to collaboratively train models without sharing raw data.
 - **Coordinator**: The entity that initiates the federated learning process and coordinates the participants. Usually, one of the participants.
 - **Participant/Client**: The entities that hold the data and participate in the federated learning process.
 
 For more advanced configurations and detailed explanations, see the 
-[configuration](https://freddsle.github.io/ComBatFed/combatfed/) .
+[configuration](https://freddsle.github.io/ComBatFed/combatfed/#configuration).
 
 ---
 
@@ -68,11 +67,11 @@ For more advanced configurations and detailed explanations, see the
 ### Prerequisites
 
 Before installing `ComBatFed`, ensure you have the following installed:
-1. **Docker**: [Installation Instructions](https://www.docker.com/get-started)
+1. **Docker**: [Installation Instructions](https://www.docker.com/get-started).
 2. **FeatureCloud CLI**.
    For Windows users, git must also be installed and added to PATH. We recommend
    and tested using [WSL](https://docs.docker.com/desktop/features/wsl/).
-3. **App Image** (either build locally or pull).
+3. **App Image** (either build locally or pull) - [info](https://freddsle.github.io/ComBatFed/combatfed/#prerequisites).
 
 ### Clone the repository
 
@@ -91,7 +90,7 @@ This will clone the repository to your local machine with example files and simu
 
 ### Input and Output
 
-For files preparation, format, config file, and output details, refer to the [How To Guide](https://freddsle.github.io/ComBatFed/docs/how_to_guide.html#file-preparation).
+For files preparation, format, config file, and output details, refer to the [How To Guide](https://freddsle.github.io/ComBatFed/combatfed/#file-structure).
 
 In summary, you need two main inputs and one optional file:
 
@@ -136,8 +135,8 @@ _For a comprehensive list of configuration options, refer to the [Configuration 
 
 ### Quick start
 
-1. For a step-by-step detailed instructions on how to start collaboration using multiple machines, refer to the [How To Guide](https://freddsle.github.io/ComBatFed/docs/how_to_guide.html)
-2. For a step-by-step instructions on how to simulate collaboration via test environment, refer to the [Local Test Guide](https://freddsle.github.io/ComBatFed/docs/local_test.html)
+1. For a step-by-step detailed instructions on how to start collaboration using multiple machines, refer to the [How To Guide](https://freddsle.github.io/ComBatFed/combatfed/#quick-start---test-mode)
+2. For a step-by-step instructions on how to simulate collaboration via test environment, refer to the [Local Test Guide](https://freddsle.github.io/ComBatFed/combatfed/#quick-start---collaboration-mode)
 
 ---
 

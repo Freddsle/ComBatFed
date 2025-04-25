@@ -3,8 +3,6 @@
 
 [![License](https://img.shields.io/github/license/Freddsle/ComBatFed)](https://github.com/Freddsle/ComBatFed/blob/main/LICENSE)
 [![Coverage Status](https://coveralls.io/repos/github/Freddsle/ComBatFed/badge.svg?branch=main)](https://coveralls.io/github/Freddsle/ComBatFed?branch=main)
-[![Docs](https://readthedocs.org/projects/combatfed/badge/?version=latest)](https://combatfed.readthedocs.io/en/latest/)
-
 ---
 
 ## Table of Contents  <!-- omit in toc -->
@@ -23,6 +21,7 @@
 - [Troubleshooting](#troubleshooting)
 - [License](#license)
 - [How to cite](#how-to-cite)
+
 ---
 
 The **ComBatFed** is a federated implementation of the 'ComBat' method from the 'sva' R package, developed within the [FeatureCloud](https://featurecloud.ai/) platform. It enables privacy-preserving batch effect correction by keeping raw data decentralized and utilizing Secure Multiparty Computation (SMPC) for secure data aggregation.
@@ -31,12 +30,12 @@ ComBatFed allows multiple participants to collaboratively remove batch effects f
 You can access and use the `ComBatFed` app directly on [FeatureCloud](https://featurecloud.ai/app/combatfed). 
 
  
- ## Installation
+## Installation
  
- ### Prerequisites
+### Prerequisites
  
  Before installing `ComBatFed`, ensure you have the following installed:
- 1. **Docker**: [Installation Instructions](https://www.docker.com/get-started)
+ 1. **Docker**: [Installation Instructions](https://www.docker.com/get-started).
  2. **FeatureCloud CLI**.
 
     - Install FeatureCloud CLI using pip:
@@ -61,6 +60,7 @@ You can access and use the `ComBatFed` app directly on [FeatureCloud](https://fe
      ```bash
      docker pull featurecloud.ai/combatfed:latest
      ```
+     
    - Alternatively, If you are using a ARM architecture (e.g., Mac M-series), you may need to build the image locally as shown below._
      ```bash
      docker build . -t featurecloud.ai/combatfed:latest
