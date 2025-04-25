@@ -172,7 +172,8 @@ For any scenario, make sure that [Pre-requisites](#prerequisites) are met and th
 
  To run the ComBatFed app in a test environment, follow these steps:
  
- 1. **Ensure the full repository including sample data is cloned and the current working directory**:  
+ 1. **Ensure the full repository including sample data is cloned and the current working directory**: 
+ 
    ```bash
    git clone https://github.com/Freddsle/ComBatFed.git
    cd ComBatFed
@@ -188,19 +189,19 @@ For any scenario, make sure that [Pre-requisites](#prerequisites) are met and th
 
    This command starts the FeatureCloud controller and sets the data directory to the specified path. The `--data-dir` option specifies the directory where the input files are located. The `--data-dir` should point to the folder containing the input files, including `config.yml`, data files, and design files.
 
-If the controller is running, you will see the yellow / green icon on the FeatureCloud web interface:
+   If the controller is running, you will see the yellow / green icon on the FeatureCloud web interface:
 
-<p align="center">
-   <img src="https://github.com/Freddsle/ComBatFed/blob/main/docs/controller.png?raw=true" alt="Controller." width="50%">
-   <br>
-   <em>GUI for the running controller.</em>
-</p>
-
-
-If the controller is not running, you will see a red icon. 
+   <p align="center">
+      <img src="https://github.com/Freddsle/ComBatFed/blob/main/docs/controller.png?raw=true" alt="Controller." width="50%">
+      <br>
+      <em>GUI for the running controller.</em>
+   </p>
 
 
-3. **Run a Sample Experiment**:  
+   If the controller is not running, you will see a red icon. 
+
+
+ 3. **Run a Sample Experiment**:  
 
    ```bash
    featurecloud test start --app-image=featurecloud.ai/combatfed:latest --client-dirs=lab_A,lab_B,lab_C,lab_D,lab_E
