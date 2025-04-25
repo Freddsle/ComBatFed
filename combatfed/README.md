@@ -161,8 +161,8 @@ The app can be run in a test environment or in a collaboration mode:
 - **Test Mode**: You can run ComBatFed as a standalone app in the [FeatureCloud test-bed](https://featurecloud.ai/development/test). This mode is used for testing and simulating the app's functionality. It allows you to run the app locally without needing to set up a full collaboration environment or multiple machines. **No registration is needed.**
 - **Collaboration Mode**: You can run ComBatFed as as a [FeatureCloud Workflow](https://featurecloud.ai/projects). This mode is used for real-world applications where multiple participants collaborate to correct batch effects in their data. It requires multiple machines with running FeatureCloud.
 
-Go to the [Test Mode](#quick-start-test-mode) section for a quick start guide.
-Go to the [Collaboration Mode](#quick-start-collaboration-mode) section for a quick start guide.
+--> Go to the [Test Mode](#quick-start-test-mode) section for a quick start guide.  
+--> Go to the [Collaboration Mode](#quick-start-collaboration-mode) section for a quick start guide.
 
 For any scenario, make sure that [Pre-requisites](#prerequisites) are met and that the input files are correctly formatted and placed in the input folder/
 
@@ -172,17 +172,17 @@ For any scenario, make sure that [Pre-requisites](#prerequisites) are met and th
 
  To run the ComBatFed app in a test environment, follow these steps:
  
- 1. **Ensure the full repository including sample data is cloned and the current working directory**:
+ 1. **Ensure the full repository including sample data is cloned and the current working directory**:  
    ```bash
    git clone https://github.com/Freddsle/ComBatFed.git
    cd ComBatFed
    ```
 
- 2. **Start the FeatureCloud Controller with the correct input folder**:  
+ 2. **Start the FeatureCloud Controller with the correct input folder**:
+
    ```bash
    # if you have the controller running in a different folder, stop it first
-   # featurecloud controller stop 
-
+   # featurecloud controller stop
    featurecloud controller start --data-dir=./datasets/Ecoli_proteomics/before
    ```
 
@@ -200,7 +200,8 @@ If the controller is running, you will see the yellow / green icon on the Featur
 If the controller is not running, you will see a red icon. 
 
 
-3. **Run a Sample Experiment**:
+3. **Run a Sample Experiment**:  
+
    ```bash
    featurecloud test start --app-image=featurecloud.ai/combatfed:latest --client-dirs=lab_A,lab_B,lab_C,lab_D,lab_E
    ```
@@ -223,7 +224,7 @@ If the controller is not running, you will see a red icon.
  
 ### Output
 
- Once the app has finished running, you will see a summary of the results in the web interface.
+Once the app has finished running, you will see a summary of the results in the web interface.
 
 <p align="center">
    <img src="https://github.com/Freddsle/ComBatFed/blob/main/docs/test_running.png?raw=true" alt="Test GUI" width="60%">
@@ -232,16 +233,16 @@ If the controller is not running, you will see a red icon.
 </p>
 
 
- Output files include:
- - **Corrected Data**: The batch-corrected data, provided in the same format as the input file or as specified in the configuration file.
- - **Log File**: A detailed log of the processing steps and any warnings or errors encountered.
+Output files include:
+- **Corrected Data**: The batch-corrected data, provided in the same format as the input file or as specified in the configuration file.
+- **Log File**: A detailed log of the processing steps and any warnings or errors encountered.
  
 Alternatively, you can check the logs in the terminal where you started the FeatureCloud controller (logs folder), and find the results in the test folder there.
 
 
 ## Quick start - Collaboration Mode
  
- **Registration on FeatureCloud is needed.**
+**Registration on FeatureCloud is needed.**
 
 For an actual multi-party setting:
 1. **Coordinator creates a Project** in [FeatureCloud](https://featurecloud.ai/projects) and invite at least 3 clients (distributes tokens).
