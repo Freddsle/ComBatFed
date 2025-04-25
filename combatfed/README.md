@@ -153,18 +153,18 @@ client_folder/
 
 ## Usage
 
- To run the ComBatFed app, you can use the FeatureCloud CLI or the FeatureCloud web interface. 
- 
- The app is designed to be run in a Docker container, which ensures that all dependencies are included and that the environment is consistent across different machines. So, it is mandatory to have Docker installed and running.
- 
- The app can be run in a test environment or in a collaboration mode.
-    - **Test Mode**: You can run ComBatFed as a standalone app in the [FeatureCloud test-bed](https://featurecloud.ai/development/test). This mode is used for testing and simulating the app's functionality. It allows you to run the app locally without needing to set up a full collaboration environment or multiple machines. **No registration is needed.**
-    - **Collaboration Mode**: You can run ComBatFed as as a [FeatureCloud Workflow](https://featurecloud.ai/projects). This mode is used for real-world applications where multiple participants collaborate to correct batch effects in their data. It requires multiple machines with running FeatureCloud.
+To run the ComBatFed app, you can use the FeatureCloud CLI or the FeatureCloud web interface. 
 
-    Go to the [Test Mode](#quick-start-test-mode) section for a quick start guide.
-    Go to the [Collaboration Mode](#quick-start-collaboration-mode) section for a quick start guide.
+The app is designed to be run in a Docker container, which ensures that all dependencies are included and that the environment is consistent across different machines. So, it is mandatory to have Docker installed and running.
 
- For any scenario, make sure that [Pre-requisites](#prerequisites) are met and that the input files are correctly formatted and placed in the input folder/
+The app can be run in a test environment or in a collaboration mode:
+- **Test Mode**: You can run ComBatFed as a standalone app in the [FeatureCloud test-bed](https://featurecloud.ai/development/test). This mode is used for testing and simulating the app's functionality. It allows you to run the app locally without needing to set up a full collaboration environment or multiple machines. **No registration is needed.**
+- **Collaboration Mode**: You can run ComBatFed as as a [FeatureCloud Workflow](https://featurecloud.ai/projects). This mode is used for real-world applications where multiple participants collaborate to correct batch effects in their data. It requires multiple machines with running FeatureCloud.
+
+Go to the [Test Mode](#quick-start-test-mode) section for a quick start guide.
+Go to the [Collaboration Mode](#quick-start-collaboration-mode) section for a quick start guide.
+
+For any scenario, make sure that [Pre-requisites](#prerequisites) are met and that the input files are correctly formatted and placed in the input folder/
 
 ### Quick start - Test Mode
 
