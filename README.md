@@ -1,7 +1,7 @@
 
 # Federated batch effects correction with ComBat (ComBatFed) <!-- omit in toc -->
 
-[![License](https://img.shields.io/github/license/Freddsle/ComBatFed)](https://github.com/Freddsle/ComBatFed/blob/main/LICENSE)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Coverage Status](https://coveralls.io/repos/github/Freddsle/ComBatFed/badge.svg?branch=main)](https://coveralls.io/github/Freddsle/ComBatFed?branch=main)
 
 ---

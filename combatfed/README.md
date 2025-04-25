@@ -1,7 +1,7 @@
 
 # Federated batch effects correction with ComBat (ComBatFed) <!-- omit in toc -->
 
-[![License](https://img.shields.io/github/license/Freddsle/ComBatFed)](https://github.com/Freddsle/ComBatFed/blob/main/LICENSE)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Coverage Status](https://coveralls.io/repos/github/Freddsle/ComBatFed/badge.svg?branch=main)](https://coveralls.io/github/Freddsle/ComBatFed?branch=main)
 
 ---
@@ -29,7 +29,6 @@ The **ComBatFed** is a federated implementation of the 'ComBat' method from the 
 
 ComBatFed allows multiple participants to collaboratively remove batch effects from their data without sharing raw data, ensuring privacy.  
 You can access and use the `ComBatFed` app directly on [FeatureCloud](https://featurecloud.ai/app/combatfed). 
-
 
 ---
 
@@ -78,6 +77,7 @@ You can access and use the `ComBatFed` app directly on [FeatureCloud](https://fe
 
 The app image which is provided in the docker registry of featurecloud built on the linux/amd64 platform. Especially if you're using a Macbook with any of the M-series chips or any other device not compatible with linux/amd64, please build the image locally.
 
+---
  
  ### Clone the repository
  
@@ -90,7 +90,7 @@ The app image which is provided in the docker registry of featurecloud built on 
  
  This will clone the repository to your local machine with example files and simulation scripts.
  
- ---
+---
  
  ## File Structure
  ### Input 
