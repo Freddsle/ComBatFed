@@ -1,3 +1,11 @@
+<table>
+  <tr>
+    <td><a href="https://freddsle.github.io/ComBatFed/combatfed/#usage"><img src="https://img.shields.io/badge/HowTo_Guide-Click_Here!-007EC6?style=for-the-badge" alt="HowTo Guide"></a></td>
+    <td><a href="https://freddsle.github.io/ComBatFed/"><img src="https://img.shields.io/badge/Documentation-Click_Here!-007EC6?style=for-the-badge" alt="Documentation"></a></td>
+    <td><a href="https://github.com/Freddsle/ComBatFed/"><img src="https://img.shields.io/badge/GitHub-Click_Here!-007EC6?style=for-the-badge" alt="GitHub"></a></td>
+    <td><a href="https://featurecloud.ai/app/combatfed"><img src="https://img.shields.io/badge/FeatureCloud_App-Click_Here!-007EC6?style=for-the-badge" alt="FeatureCloud App"></a></td>
+  </tr>
+</table>
 
 # Federated batch effects correction with ComBat (ComBatFed) <!-- omit in toc -->
 
@@ -130,13 +138,13 @@ ComBatFed:
   output_tabular: true                         
 
 ```
-_For a comprehensive list of configuration options, refer to the [Configuration Section](https://freddsle.github.io/ComBatFed/combatfed) in the combatfed README._
+_For a comprehensive list of configuration options, refer to the [Configuration Section](https://freddsle.github.io/ComBatFed/combatfed/#configuration) in the combatfed README._
 
 
 ### Quick start
 
-1. For a step-by-step detailed instructions on how to start collaboration using multiple machines, refer to the [How To Guide](https://freddsle.github.io/ComBatFed/combatfed/#quick-start---test-mode)
-2. For a step-by-step instructions on how to simulate collaboration via test environment, refer to the [Local Test Guide](https://freddsle.github.io/ComBatFed/combatfed/#quick-start---collaboration-mode)
+1. For a step-by-step detailed instructions on how to start collaboration using multiple machines, refer to the [How To Guide](https://freddsle.github.io/ComBatFed/combatfed/#quick-start---test-mode).
+2. For a step-by-step instructions on how to simulate collaboration via test environment, refer to the [Local Test Guide](https://freddsle.github.io/ComBatFed/combatfed/#quick-start---collaboration-mode).
 
 ---
 

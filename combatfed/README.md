@@ -1,3 +1,12 @@
+<table>
+  <tr>
+    <td><a href="https://freddsle.github.io/ComBatFed/combatfed/#usage"><img src="https://img.shields.io/badge/HowTo_Guide-Click_Here!-007EC6?style=for-the-badge" alt="HowTo Guide"></a></td>
+    <td><a href="https://freddsle.github.io/ComBatFed/"><img src="https://img.shields.io/badge/Documentation-Click_Here!-007EC6?style=for-the-badge" alt="Documentation"></a></td>
+    <td><a href="https://github.com/Freddsle/ComBatFed/"><img src="https://img.shields.io/badge/GitHub-Click_Here!-007EC6?style=for-the-badge" alt="GitHub"></a></td>
+    <td><a href="https://featurecloud.ai/app/combatfed"><img src="https://img.shields.io/badge/FeatureCloud_App-Click_Here!-007EC6?style=for-the-badge" alt="FeatureCloud App"></a></td>
+  </tr>
+</table>
+
 
 # Federated batch effects correction with ComBat (ComBatFed) <!-- omit in toc -->
 
@@ -16,7 +25,6 @@
 - [Usage](#usage)
     - [Quick start - Test Mode](#quick-start---test-mode)
     - [Quick start - Collaboration Mode](#quick-start---collaboration-mode)
-        - [Step-by-step scenario](#step-by-step-scenario)
 - [FeatureCloud App states](#featurecloud-app-states)
 - [Contact information](#contact-information)
 - [Troubleshooting](#troubleshooting)
@@ -74,8 +82,6 @@ You can access and use the `ComBatFed` app directly on [FeatureCloud](https://fe
 
  The app image which is provided in the docker registry of featurecloud built on the linux/amd64 platform. Especially if you're using a Macbook with any of the M-series chips or any other device not compatible with linux/amd64, please build the image locally.
 
----
- 
 ### Clone the repository
  
  If you want to run the simulations locally, clone the repository:
@@ -93,12 +99,13 @@ You can access and use the `ComBatFed` app directly on [FeatureCloud](https://fe
 ### Input 
 
  In summary, you need two main inputs and one optional file:
- 
- <p align="center">
-    <img src="../docs/fig_S1.jpg" alt="Required files figure" width="90%">
-    <br>
-    <em>Input files required for ComBatFed.</em>
- </p>
+
+<p align="center">
+   <img src="https://github.com/Freddsle/fedRBE/blob/main/docs/fig_S1.jpg?raw=true" alt="Required files figure" width="90%">
+   <br>
+   <em>Input files required for ComBatFed.</em>
+</p>
+
 
 - **Data File**: The main data file containing the expression data. It should be in a tabular format (e.g., TSV, CSV) with samples as rows and features as columns or vice versa. The first column should contain the sample names / feature names (depending on the `rows_as_features` parameter in the config file).  
 The data file can contain missing values, but they will be removed on the first step of the app.
@@ -171,7 +178,7 @@ client_folder/
    cd ComBatFed
    ```
 
- 2. **Start the FeatureCloud Controller with the correct input folder**:
+ 2. **Start the FeatureCloud Controller with the correct input folder**:  
    ```bash
    # if you have the controller running in a different folder, stop it first
    # featurecloud controller stop 
@@ -179,14 +186,15 @@ client_folder/
    featurecloud controller start --data-dir=./datasets/Ecoli_proteomics/before
    ```
 
- This command starts the FeatureCloud controller and sets the data directory to the specified path. The `--data-dir` option specifies the directory where the input files are located. The `--data-dir` should point to the folder containing the input files, including `config.yml`, data files, and design files.
+   This command starts the FeatureCloud controller and sets the data directory to the specified path. The `--data-dir` option specifies the directory where the input files are located. The `--data-dir` should point to the folder containing the input files, including `config.yml`, data files, and design files.
 
  If the controller is running, you will see the yellow / green icon on the FeatureCloud web interface:
-    <p align="center">
-        <img src="../docs/controller.png" alt="Controller" width="50%">
-        <br>
-        <em>Running controller interface.</em>
-    </p>
+
+<p align="center">
+   <img src="../docs/controller.png" alt="Controller" width="50%">
+   <br>
+   <em>Running controller interface.</em>
+</p>
 
  If the controller is not running, you will see a red icon. 
 
@@ -201,11 +209,11 @@ client_folder/
    - Select 5 clients, add lab_A, lab_B, lab_C, lab_D, lab_E respectively for the 5 clients to their path. 
    - Click "Start" to run the app.
 
-    <p align="center">
-        <img src="../docs/start_test1.png" alt="Test GUI" width="50%">
-        <br>
-        <em>Example test.</em>
-    </p>
+<p align="center">
+   <img src="../docs/start_test1.png" alt="Test GUI" width="50%">
+   <br>
+   <em>Example test.</em>
+</p>
 
 4. **Monitor the Experiment**:
     - You can monitor the progress of the experiment in the FeatureCloud web interface. The app will run on each client, and you can view logs and results as they are generated.
@@ -215,11 +223,13 @@ client_folder/
 ### Output
 
  Once the app has finished running, you will see a summary of the results in the web interface.
-    <p align="center">
-        <img src="../docs/test_running.png" alt="Test GUI" width="50%">
-        <br>
-        <em>Where to find results and logs.</em>
-    </p>
+
+<p align="center">
+   <img src="https://github.com/Freddsle/fedRBE/blob/main/docs/test_running.png?raw=true" alt="Test GUI" width="60%">
+   <br>
+   <em>Where to find results and logs.</em>
+</p>
+
 
  Output files include:
  - **Corrected Data**: The batch-corrected data, provided in the same format as the input file or as specified in the configuration file.
@@ -251,7 +261,9 @@ For an actual multi-party setting:
    - The coordinator **creates tokens** and sends them to Clients A, B, and C.
 
    <p align="center">
-   <img src="../docs/how_to1.png" alt="Coordinator steps." width="70%">
+      <img src="https://github.com/Freddsle/fedRBE/blob/main/docs/how_to1.png?raw=true" alt="Coordinator steps." width="70%">
+      <br>
+      <em>Coordinator steps.</em>
    </p>
    
 2. **Client Setup**:
@@ -264,9 +276,11 @@ For an actual multi-party setting:
    - After joining, each client uploads their data and config file to the FeatureCloud GUI client. The data will not be sent to the coordinator or other clients, but makes it available for the local Docker container with the app.
 
    <p align="center">
-   <img src="../docs/how_to2.png" alt="Client steps" width="70%">
+      <img src="https://github.com/Freddsle/fedRBE/blob/main/docs/how_to2.png?raw=true" alt="Client steps." width="70%">
+      <br>
+      <em>Client steps.</em>
    </p>
-   
+
 4. **Running ComBatFed**:
    - After all clients join, the coordinator starts the project.
    - The app runs locally at each client, securely combining results.
@@ -283,10 +297,10 @@ After completion, each client finds:
 The app has the following states:
 
 <p align="center">
-        <img src="myplot.png" alt="app states" width="50%">
-        <br>
-        <em>ComBatFed app states.</em>
-    </p>
+   <img src="https://github.com/Freddsle/fedRBE/blob/main/combatfed/myplot.png?raw=true" alt="ComBatFed app states." width="50%">
+   <br>
+   <em>ComBatFed app states.</em>
+</p>
 
 ## Contact information
  
