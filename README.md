@@ -25,7 +25,7 @@
 
 ---
 
-## Architecture overview
+## Overview
 
 
 The **ComBatFed** is a federated implementation of the 'ComBat' method from the 'sva' R package, developed within the [FeatureCloud](https://featurecloud.ai/) platform. It enables privacy-preserving batch effect correction by keeping raw data decentralized and utilizing Secure Multiparty Computation (SMPC) for secure data aggregation.
@@ -96,7 +96,7 @@ For files preparation, format, config file, and output details, refer to the [Ho
 In summary, you need two main inputs and one optional file:
 
 <p align="center">
-   <img src="./docs/fig_S1.jpg" alt="Required files figure" width="70%">
+   <img src="./docs/fig_S1.jpg" alt="Required files figure" width="90%">
    <br>
    <em>Input files required for ComBatFed.</em>
 </p>
@@ -133,7 +133,6 @@ ComBatFed:
 ```
 _For a comprehensive list of configuration options, refer to the [Configuration Section](https://freddsle.github.io/ComBatFed/combatfed) in the combatfed README._
 
--
 
 ### Quick start
 

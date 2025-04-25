@@ -1,162 +1,332 @@
-# FeatureCloud App Blank Template with included visualizer application
 
-The app-blank template contains an initial state that does not execute commands other than transitioning to the terminal state.
-This template is a starting point for implementing apps by adding more states and operations.
+# Federated batch effects correction with ComBat (ComBatFed) <!-- omit in toc -->
+
+[![License](https://img.shields.io/github/license/Freddsle/ComBatFed)](https://github.com/Freddsle/ComBatFed/blob/main/LICENSE)
+[![Coverage Status](https://coveralls.io/repos/github/Freddsle/ComBatFed/badge.svg?branch=main)](https://coveralls.io/github/Freddsle/ComBatFed?branch=main)
+[![Docs](https://readthedocs.org/projects/combatfed/badge/?version=latest)](https://combatfed.readthedocs.io/en/latest/)
+
+---
+
+## Table of Contents  <!-- omit in toc -->
+- [Installation](#installation)
+    - [Prerequisites](#prerequisites)
+    - [Clone the repository](#clone-the-repository)
+- [File Structure](#file-structure)
+    - [Input](#input)
+    - [Configuration](#configuration)
+- [Usage](#usage)
+    - [Quick start - Test Mode](#quick-start---test-mode)
+    - [Quick start - Collaboration Mode](#quick-start---collaboration-mode)
+        - [Step-by-step scenario](#step-by-step-scenario)
+- [FeatureCloud App states](#featurecloud-app-states)
+- [Contact information](#contact-information)
+- [Troubleshooting](#troubleshooting)
+- [License](#license)
+- [How to cite](#how-to-cite)
+---
+
+The **ComBatFed** is a federated implementation of the 'ComBat' method from the 'sva' R package, developed within the [FeatureCloud](https://featurecloud.ai/) platform. It enables privacy-preserving batch effect correction by keeping raw data decentralized and utilizing Secure Multiparty Computation (SMPC) for secure data aggregation.
+
+ComBatFed allows multiple participants to collaboratively remove batch effects from their data without sharing raw data, ensuring privacy.  
+You can access and use the `ComBatFed` app directly on [FeatureCloud](https://featurecloud.ai/app/combatfed). 
+
  
+ ## Installation
+ 
+ ### Prerequisites
+ 
+ Before installing `ComBatFed`, ensure you have the following installed:
+ 1. **Docker**: [Installation Instructions](https://www.docker.com/get-started)
+ 2. **FeatureCloud CLI**.
 
-For registering and testing your apps or using other apps, please visit
-[FeatureCloud.ai](https://featurecloud.ai/). And for more information about FeatureCloud architecture,
-please refer to 
-[The FeatureCloud AI Store for Federated Learning in Biomedicine and Beyond](https://arxiv.org/abs/2105.05734) [[1]](#1).
+    - Install FeatureCloud CLI using pip:
+      ```bash
+      pip install featurecloud
+      ```
+    - Run controller:
+      ```bash
+      featurecloud controller start
+      ```
+    For Windows users, git must also be installed and added to PATH. We recommend
+    and tested using [WSL](https://docs.docker.com/desktop/features/wsl/).
 
+ 3. **App Image**:
+  
+   - For linux/amd64:
+     ```bash
+     # pull the pre-built image
+     featurecloud app download featurecloud.ai/combatfed
+     ```
+     or directly via Docker
+     ```bash
+     docker pull featurecloud.ai/combatfed:latest
+     ```
+   - Alternatively, If you are using a ARM architecture (e.g., Mac M-series), you may need to build the image locally as shown below._
+     ```bash
+     docker build . -t featurecloud.ai/combatfed:latest
+     ```
 
-## Developing Apps using FeatureCloud library
-FeatureCloud library facilitates app development inside the FeatureCloud platform. To develop apps, developers
-should define their states and register them to the default app.
+     or build the image from GitHub locally:
+     ```bash
+      git clone https://github.com/Freddsle/ComBatFed.git
+      cd ComBatFed/combatfed
+      docker build . -t featurecloud.ai/combatfed:latest
+      ```
 
-### defining new states
-For defining new states, in general, developers can use [`AppState`](engine/README.md#appstate-defining-custom-states)
-which supports further communications, transitions, logging, and operations.
+The app image which is provided in the docker registry of featurecloud built on the linux/amd64 platform. Especially if you're using a Macbook with any of the M-series chips or any other device not compatible with linux/amd64, please build the image locally.
 
-#### AppState
-[`AppState`](engine/README.md#appstate-defining-custom-states) is the building block of FeatureCloud apps that covers
-all the scenarios with the verifying mechanism. Each state of 
-the app should extend [`AppState`](engine/README.md#appstate-defining-custom-states), which is an abstract class with two specific abstract methods:
-- [`register`](engine/README.md#registering-a-specific-transition-for-state-register_transition):
-should be implemented by apps to register possible transitions between the current state to other states.
-This method is part of verifying mechanism in FeatureCloud apps that ensures logically eligible roles can participate in the current state
-and transition to other ones.
-- [`run`](engine/README.md#executing-states-computation-run): executes all operations and calls for communication between FeatureCloud clients.
-`run` is another part of the verification mechanism in the FeatureCloud library that ensures the transitions to other states are logically correct
-by returning the name of the next state.
+ 
+ ### Clone the repository
+ 
+ If you want to run the simulations locally, clone the repository:
+ 
+ ```bash
+ git clone https://github.com/Freddsle/ComBatFed.git
+ cd ComBatFed
+ ```
+ 
+ This will clone the repository to your local machine with example files and simulation scripts.
+ 
+ ---
+ 
+ ## File Structure
+ ### Input 
 
+ In summary, you need two main inputs and one optional file:
+ 
+ <p align="center">
+    <img src="../docs/fig_S1.jpg" alt="Required files figure" width="90%">
+    <br>
+    <em>Input files required for ComBatFed.</em>
+ </p>
 
-### Registering apps
-For each state, developers should extend one of the abstract states and call the helper function to register automatically
-the state in the default FeatureCloud app:
+- **Data File**: The main data file containing the expression data. It should be in a tabular format (e.g., TSV, CSV) with samples as rows and features as columns or vice versa. The first column should contain the sample names / feature names (depending on the `rows_as_features` parameter in the config file).  
+The data file can contain missing values, but they will be removed on the first step of the app.
+- **Design File**: An optional file that specifies the design matrix for the data. It should contain sample names and covariates.
+The first column should contain the sample names, that match the sample names in the data file. The design file is read in the following way:
+- **Configuration File**: A YAML file that specifies the parameters for the ComBatFed app. This file should be named `config.yml` or `config.yaml` and placed in the input folder. 
 
-```angular2html
-@app_state(name='initial', role=Role.BOTH, app_name='example')
-class ExampleState(AppState):
-    def register(self):
-        self.register_transition('terminal', Role.BOTH)
-
-    def run(self):
-        self.read_config()
-        self.app.log(self.config)
-        return 'terminal'
+**Minimal Example Directory Structure**:
+```text
+client_folder/
+├─ config.yml
+├─ expression_data.csv
+├─ design.csv
 ```
+ 
+ ### Configuration
+ 
+ `ComBatFed` is highly configurable via the `config.yml` file. This file controls data formats, normalization methods, and other essential parameters.
+ 
+ Example Config File (config.yml):
+ 
+ ```yaml
 
-### building the app docker image
-Once app implementation is done, building the docker image for testing or adding it to
-[FeatureCloud AI store](https://featurecloud.ai/ai-store?view=store&q=&r=0),
-developers should provide the following files.
-#### Dockerization files
+  FedComBat:                                    # Mandatory header
+  # Required settings:
+  data_filename: "expr_for_correction.tsv"      # Data file relative to the input folder
+  data_separator: "\t"                          # CSV file delimiter
 
-For dockerizing apps, regardless of their applications, there should be some specific files:
+  # Optional settings:
+  min_samples: 3                                # Minimum samples required per feature
+  covariates: ["Status"]                        # List of covariates to use
+  smpc: true                                    # Flag for secure multi-party computation
+  design_filename: "design.tsv"                 # Design file (optional; required if using batch info)
+  design_separator: "\t"                        # Delimiter for the design file
+  rows_as_features: false                       # Set to true if the data file is an expression file with features as rows
+  index_col: 0                                  # Column to use as index (0-based)
+  position: 1                                   # Client position (if applicable)
+  batch_col_name: "batch"                       # Column in the design file that contains batch information
 
-1. [Dockerfile](Dockerfile)
-2. [build.sh](build.sh)
-3. [server-config](server_config)
-   - [docker-entrypoint.sh](server_config/docker-entrypoint.sh)
-   - [nginx](server_config/nginx)
-   - [supervisord.conf](server_config/supervisord.conf)
+  output_tabular: true                          # Output tabular data, if true: sample x features; if false: features x sample
 
-Developers should ensure that these files with the same structure and content exist in the same directory as their app
-implementation. 
+ ```
+
+ ## Usage
+
+ To run the ComBatFed app, you can use the FeatureCloud CLI or the FeatureCloud web interface. 
+ 
+ The app is designed to be run in a Docker container, which ensures that all dependencies are included and that the environment is consistent across different machines. So, it is mandatory to have Docker installed and running.
+ 
+ The app can be run in a test environment or in a collaboration mode.
+    - **Test Mode**: You can run ComBatFed as a standalone app in the [FeatureCloud test-bed](https://featurecloud.ai/development/test). This mode is used for testing and simulating the app's functionality. It allows you to run the app locally without needing to set up a full collaboration environment or multiple machines. **No registration is needed.**
+    - **Collaboration Mode**: You can run ComBatFed as as a [FeatureCloud Workflow](https://featurecloud.ai/projects). This mode is used for real-world applications where multiple participants collaborate to correct batch effects in their data. It requires multiple machines with running FeatureCloud.
+
+    Go to the [Test Mode](#quick-start-test-mode) section for a quick start guide.
+    Go to the [Collaboration Mode](#quick-start-collaboration-mode) section for a quick start guide.
+
+ For any scenario, make sure that [Pre-requisites](#prerequisites) are met and that the input files are correctly formatted and placed in the input folder/
+
+ ### Quick start - Test Mode
+
+ **No registration on FeatureCloud is needed.**
+
+ To run the ComBatFed app in a test environment, follow these steps:
+ 
+ 1. **Ensure the full repository including sample data is cloned and the current working directory**:
+   ```bash
+   git clone https://github.com/Freddsle/ComBatFed.git
+   cd ComBatFed
+   ```
+
+ 2. **Start the FeatureCloud Controller with the correct input folder**:
+   ```bash
+   # if you have the controller running in a different folder, stop it first
+   # featurecloud controller stop 
+
+   featurecloud controller start --data-dir=./datasets/Ecoli_proteomics/before
+   ```
+
+ This command starts the FeatureCloud controller and sets the data directory to the specified path. The `--data-dir` option specifies the directory where the input files are located. The `--data-dir` should point to the folder containing the input files, including `config.yml`, data files, and design files.
+
+ If the controller is running, you will see the yellow / green icon on the FeatureCloud web interface:
+    <p align="center">
+        <img src="../docs/controller.png" alt="Controller" width="50%">
+        <br>
+        <em>Running controller interface.</em>
+    </p>
+
+ If the controller is not running, you will see a red icon. 
 
 
-#### App-specific files
-All app-specific files should include data or codes strictly dependent on the app's functionality.
+3. **Run a Sample Experiment**:
+   ```bash
+   featurecloud test start --app-image=featurecloud.ai/combatfed:latest --client-dirs=lab_A,lab_B,lab_C,lab_D,lab_E
+   ```
 
-##### main.py
-Each app should be implemented in a directory that includes the [`main.py`](main.py) file, which in turn comprises either direct
-implementation of states or importing them. Moreover, `main` should import `bottle` and `api` packages:
-```angular2html
-from bottle import Bottle
+   Alternatively, you can start the experiment from the [frontend](https://featurecloud.ai/development/test/new):
+   - Use `featurecloud.ai/combatfed:latest` as the app image.
+   - Select 5 clients, add lab_A, lab_B, lab_C, lab_D, lab_E respectively for the 5 clients to their path. 
+   - Click "Start" to run the app.
 
-from api.http_ctrl import api_server
-from api.http_web import web_server
+    <p align="center">
+        <img src="../docs/start_test1.png" alt="Test GUI" width="50%">
+        <br>
+        <em>Example test.</em>
+    </p>
 
-import apps.examples.dice
+4. **Monitor the Experiment**:
+    - You can monitor the progress of the experiment in the FeatureCloud web interface. The app will run on each client, and you can view logs and results as they are generated.
+    - The app will run for a few minutes, depending on the size of the data and the number of clients. You can check the logs for any errors or warnings.
+    
+ ---
+ 
+ ### Output
 
-from engine.app import app
+ Once the app has finished running, you will see a summary of the results in the web interface.
+    <p align="center">
+        <img src="../docs/test_running.png" alt="Test GUI" width="50%">
+        <br>
+        <em>Where to find results and logs.</em>
+    </p>
 
-server = Bottle()
-```
-Here we imported `dice` app from our [`apps`](apps/README.md) package, which because of putting 
-[`app_state`](engine/README.md#registering-states-to-the-app-app_state) on top of state classes, 
-merely importing the states and registering them into the [`app` instance](engine/README.md#app-instance).     
+ Output files include:
+ - **Corrected Data**: The batch-corrected data, provided in the same format as the input file or as specified in the configuration file.
+ - **Log File**: A detailed log of the processing steps and any warnings or errors encountered.
+ 
+Alternatively, you can check the logs in the terminal where you started the FeatureCloud controller (logs folder), and find the results in the test folder there.
 
-For running the app, inside a docker container, [`app.register()`](engine/README.md#registering-all-transitions-appregister)
-should be called to register and verify all transitions; next, api and servers should mount at corresponding paths; and finally
-the server is ready to run the app.
 
-```angular2html
-    app.register()
-    server.mount('/api', api_server)
-    server.mount('/web', web_server)
-    server.run(host='localhost', port=5000)
-```
+ ## Quick start - Collaboration Mode
+ 
+ **Registration on FeatureCloud is needed.**
 
-All of the codes above, except for importing the app or, alternatively, implementing states, can be exactly same for all apps.  
+For an actual multi-party setting:
+1. **Coordinator creates a Project** in [FeatureCloud](https://featurecloud.ai/projects) and invite at least 3 clients (distributes tokens).
+2. **Each Participant (Client)** prepares their data and a `config.yml` file.
+3. **All Clients Join with Tokens** provided by the coordinator.
+4. **Each Client** uploads their data and `config.yml` to their local FeatureCloud instance.
+5. **Start the Project**: `ComBatFed` runs securely, never sharing raw data.
+6. **Get the Results**: Each client receives the corrected data and logs.
 
-##### requirements.txt
-for installing required python libraries inside the docker image, developers should provide a list of libraries in [requirements.txt](requirements.txt).
-Some requirements are necessary for the FeatureCloud library, which should always be listed, are:
-```angular2html
-bottle
-jsonpickle
-joblib
-numpy
-bios
-pydot
-pyyaml
-```
 
-And the rest should be all other app-required libraries.
+### Step-by-step scenario
 
-##### config.yml
-Each app may need some hyper-parameters or arguments that the end-users should provide. Such data should be included
-in [`config.yml`](apps/README.md#config-file), which should be read and interpreted by the app. 
+**Scenario**: Three clients (A, B, and C) collaborate on a federated analysis. Video tutorial: [link](https://featurecloud.ai/researchers).
 
-### Run YOUR_APPLICATION
+1. **Coordinator Actions**:  
+   - The coordinator logs into the FeatureCloud platform and **creates a new project**.
+   - Add the ComBatFed app into the workflow and *finalize the project*.
+   - The coordinator **creates tokens** and sends them to Clients A, B, and C.
 
-#### Prerequisite
+   <p align="center">
+   <img src="../docs/how_to1.png" alt="Coordinator steps." width="70%">
+   </p>
+   
+2. **Client Setup**:
+   - Adjust `config.yml` parameters as needed.
+   - **Client A, B, C**: Place `expression_data_client.csv` and `config.yml` in a local folder.
+   - In case of multiple batches in one client, the client should provide a `design.csv` file with batch information and specify this column name in the `config.yml` parameter `batch_col`.
+   
+3. **Joining the Project**:
+   - Each client uses the FeatureCloud to login and join the project using the provided token.
+   - After joining, each client uploads their data and config file to the FeatureCloud GUI client. The data will not be sent to the coordinator or other clients, but makes it available for the local Docker container with the app.
 
-To run YOUR_APPLICATION, you should install Docker and FeatureCloud pip package:
+   <p align="center">
+   <img src="../docs/how_to2.png" alt="Client steps" width="70%">
+   </p>
+   
+4. **Running ComBatFed**:
+   - After all clients join, the coordinator starts the project.
+   - The app runs locally at each client, securely combining results.
+   
+### Results and output:
 
-```shell
-pip install featurecloud
-```
+After completion, each client finds:
+   - The batch-corrected expression data.
+   - logs: Detailed logs of the process.
+   
 
-Then either download YOUR_APPLICATION image from the FeatureCloud docker repository:
+## FeatureCloud App states
 
-```shell
-featurecloud app download featurecloud.ai/YOUR_APPLICATION
-```
+The app has the following states:
 
-Or build the app locally:
+<p align="center">
+        <img src="myplot.png" alt="app states" width="50%">
+        <br>
+        <em>ComBatFed app states.</em>
+    </p>
 
-```shell
-featurecloud app build featurecloud.ai/YOUR_APPLICATION
-```
+ ## Contact information
+ 
+ For questions, issues, or support, please open an issue on the [GitHub repository](https://github.com/Freddsle/ComBatFed).
+ 
+ ---
+ 
+ ## Troubleshooting
+ 
+ Encountering issues? Here are some common problems and their solutions:
+ 
+ - **Missing Files**: Ensure `config.yml` and data files are in the correct directory.
+ - **Incorrect Format**: Verify `rows_as_features` and `index_col` settings in `config.yml`.
+ - **No Output Produced**: Check logs for error messages.
+ - **Errors with Test runs**: Ensure the is no leftover running Docker containers. Restart Docker / System if necessary. 
+ 
+ ---
+ 
+ ## License
+ 
+ This project is licensed under the [Apache License 2.0](LICENSE).
+ 
+ ---
+ 
+ ## How to cite
+ 
+ If you use this code in your research, please cite the repository
+ ```bibtex
+ @misc{ComBatFed,
+   author = {Yuliya Burankova},
+   title = {ComBatFed: Federated batch effects correction with ComBat},
+   year = {2025},
+   publisher = {GitHub},
+   journal = {GitHub repository},
+   url = {https://github.com/Freddsle/ComBatFed}
+ }
+ ```
 
-Please provide example data so others can run YOUR_APPLICATION with the desired settings in the `config.yml` file.
 
-#### Run YOUR_APPLICATION in the test-bed
 
-You can run YOUR_APPLICATION as a standalone app in the [FeatureCloud test-bed](https://featurecloud.ai/development/test) or [FeatureCloud Workflow](https://featurecloud.ai/projects). You can also run the app using CLI:
 
-```shell
-featurecloud test start --app-image featurecloud.ai/YOUR_APPLICATION --client-dirs './sample/c1,./sample/c2' --generic-dir './sample/generic'
-```
 
-### Visualizer
-The visualizer app can be accessed through /visualizer page, relative to normal web frontend. It is based on the [FeatureCloud Cluster Visualization app](https://featurecloud.ai/app/fc-cluster-visualization-app). [Sourcecode and documentation](https://github.com/FeatureCloud/fc-cluster-visualization-app/) are available. 
 
-### References
-<a id="1">[1]</a> 
-Matschinske, J., Späth, J., Nasirigerdeh, R., Torkzadehmahani, R., Hartebrodt, A., Orbán, B., Fejér, S., Zolotareva,
-O., Bakhtiari, M., Bihari, B. and Bloice, M., 2021.
-The FeatureCloud AI Store for Federated Learning in Biomedicine and Beyond. arXiv preprint arXiv:2105.05734.
+

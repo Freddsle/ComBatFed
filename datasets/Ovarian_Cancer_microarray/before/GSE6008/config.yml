@@ -1,4 +1,4 @@
-FedComBat:
+ComBatFed:
   # Required settings:
   data_filename: "expr_for_correction.tsv"     # Data file relative to the input folder
   data_separator: "\t"                           # CSV file delimiter
@@ -13,3 +13,28 @@ FedComBat:
   index_col: 0                                  # Column to use as index (0-based)
   position: 0                                   # Client position (if applicable)
   batch_col_name: "batch"                       # Column in the design file that contains batch information
+
+  output_tabular: true                         # Output tabular data, if true: sample x features; if false: features x sample
+
+fc_kmeans:
+  algorithm:
+    k_max: 6
+    k_min: 2
+    k_step: 2
+    seed: 42
+  input:
+    delimiter: "\t"
+    dir: "kmeans"
+    file: expr_for_kmeans_before.tsv
+    # file: expr_for_kmeans_after.tsv
+  output:
+    centroids: centroids.csv
+    clustering: clustering.csv
+    delimiter: ;
+    dir: kmeans
+    silhouette: silhouette.csv
+  scaling:
+    center: true
+    log_transform: false
+    max_nan_fraction: 1
+    variance: true
